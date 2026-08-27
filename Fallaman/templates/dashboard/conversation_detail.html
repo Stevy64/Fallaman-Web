@@ -1,0 +1,37 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Discussion #{{ conversation.pk }} — Admin{% endblock %}
+{% block admin_kicker %}Lecture seule{% endblock %}
+{% block admin_title %}Suivi conversation{% endblock %}
+{% block admin %}
+<p class="admin-back mb-3">
+  <a href="{% url 'dashboard:staff_messaging' %}?tab=conversations"><i class="bi bi-arrow-left"></i> Messagerie</a>
+</p>
+<section class="admin-panel admin-reveal">
+  <div class="admin-panel-head">
+    <h2>{{ conversation.listing.title }}</h2>
+    <a href="{{ conversation.listing.get_absolute_url }}">Voir l'annonce</a>
+  </div>
+  <p class="meta mb-3">
+    {{ conversation.user_low.display_name }}
+    (<a href="{% url 'dashboard:profile_detail' conversation.user_low_id %}">profil</a>)
+    ↔
+    {{ conversation.user_high.display_name }}
+    (<a href="{% url 'dashboard:profile_detail' conversation.user_high_id %}">profil</a>)
+    {% if conversation.is_expired %} · <span class="admin-pill is-off">Expirée</span>{% endif %}
+  </p>
+
+  <div class="admin-chat-thread" role="log" aria-label="Messages de la conversation">
+    {% for message in chat_messages %}
+      <article class="admin-chat-msg {% if message.sender_id == conversation.listing.author_id %}is-employer{% else %}is-seeker{% endif %}">
+        <header class="admin-chat-meta">
+          <strong>{{ message.sender.display_name }}</strong>
+          <time datetime="{{ message.created_at|date:'c' }}">{{ message.created_at|date:"d/m/Y H:i" }}</time>
+        </header>
+        <p class="admin-chat-body">{{ message.body }}</p>
+      </article>
+    {% empty %}
+      <p class="admin-empty">Aucun message (discussion vide ou expirée).</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

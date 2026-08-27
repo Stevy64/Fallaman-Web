@@ -1,0 +1,20 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Alertes équipe — Admin Fallaman{% endblock %}
+{% block admin_kicker %}Notifications{% endblock %}
+{% block admin_title %}Alertes{% endblock %}
+{% block admin %}
+<section class="admin-panel admin-reveal">
+  {% for alert in alerts %}
+    <a class="admin-row" href="{% if alert.url %}{{ alert.url }}{% else %}#{% endif %}">
+      <div>
+        <strong>{{ alert.title }}</strong>
+        <p>{{ alert.get_kind_display }} · {{ alert.created_at|date:"d/m/Y H:i" }}</p>
+      </div>
+      {% if not alert.is_read %}<span class="admin-pill is-wait">Nouveau</span>{% endif %}
+    </a>
+  {% empty %}
+    <p class="admin-empty">Aucune alerte.</p>
+  {% endfor %}
+  {% include "dashboard/_pager.html" with page_obj=alerts %}
+</section>
+{% endblock %}

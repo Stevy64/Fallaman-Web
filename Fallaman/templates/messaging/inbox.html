@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load fallaman_tags %}
+{% block title %}Messages — Fallaman{% endblock %}
+{% block body_class %}page-chat page-chat-inbox{% endblock %}
+{% block content %}
+<div class="chat-page page-enter">
+  <div class="chat-stage">
+    <div class="container-narrow chat-stage-inner">
+      <p class="chat-kicker"><i class="bi bi-chat-square-dots-fill"></i> Discussions temporaires</p>
+      <h1>Messages</h1>
+      <p class="chat-lead">Après 72 h sans message, elles sont supprimées.</p>
+      <a class="chat-fav-link" href="{% url 'listings:favorites' %}">
+        <i class="bi bi-heart-fill"></i> Mes annonces likées
+        {% if favorite_ids %}<span>{{ favorite_ids|length }}</span>{% endif %}
+      </a>
+    </div>
+  </div>
+
+  <section class="container-narrow chat-panel">
+    <div class="listing-stack">
+      {% for conversation in conversations %}
+        <a class="listing-card conversation-card {% if conversation.listing.listing_type == 'mission' %}is-mission-chat{% endif %}" href="{{ conversation.get_absolute_url }}">
+          <div class="conversation-row">
+            <div class="listing-logo {% if conversation.listing.listing_type == 'mission' %}is-mission{% endif %}">
+              {{ conversation.counterpart.display_name|make_list|first|upper }}
+            </div>
+            <div>
+              <strong>{{ conversation.counterpart.display_name }}</strong>
+              <p class="meta mb-0">{{ conversation.listing.title }}</p>
+              <span class="chat-type-pill {% if conversation.listing.listing_type == 'mission' %}is-mission{% endif %}">
+                {% if conversation.listing.listing_type == 'mission' %}Mission{% else %}Emploi{% endif %}
+              </span>
+            </div>
+          </div>
+        </a>
+      {% empty %}
+        <div class="empty-state">
+          <p>Vos conversations temporaires apparaîtront ici.</p>
+          <a class="btn btn-accent" href="{% url 'listings:search' %}">Chercher une annonce</a>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

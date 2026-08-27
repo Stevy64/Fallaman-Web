@@ -1,0 +1,37 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Profils — Admin Fallaman{% endblock %}
+{% block admin_kicker %}Communauté{% endblock %}
+{% block admin_title %}Profils{% endblock %}
+{% block admin %}
+<form
+  class="admin-toolbar admin-reveal"
+  method="get"
+  style="--d:.04s"
+  hx-get="{% url 'dashboard:profiles' %}"
+  hx-target="#admin-profile-results"
+  hx-trigger="submit, keyup changed delay:350ms from:input[name=q]"
+  hx-push-url="true"
+  hx-indicator="#admin-profile-skeleton"
+>
+  <label class="visually-hidden" for="admin-profile-q">Rechercher un profil</label>
+  <input id="admin-profile-q" class="form-control" type="search" name="q" value="{{ q }}" placeholder="Nom, téléphone, métier…" enterkeyhint="search" autocomplete="off">
+  <input type="hidden" name="status" value="{{ status }}">
+  <button class="btn btn-navy" type="submit">Chercher</button>
+</form>
+
+<div class="admin-filters admin-reveal" style="--d:.08s">
+  <a class="{% if status == 'all' %}is-on{% endif %}" href="?q={{ q|urlencode }}&status=all">Tous</a>
+  <a class="{% if status == 'active' %}is-on{% endif %}" href="?q={{ q|urlencode }}&status=active">Actifs</a>
+  <a class="{% if status == 'suspended' %}is-on{% endif %}" href="?q={{ q|urlencode }}&status=suspended">Suspendus</a>
+  <a class="{% if status == 'incomplete' %}is-on{% endif %}" href="?q={{ q|urlencode }}&status=incomplete">Incomplets</a>
+  <a class="{% if status == 'reported' %}is-on{% endif %}" href="?q={{ q|urlencode }}&status=reported">Signalés</a>
+  <a class="{% if status == 'staff' %}is-on{% endif %}" href="?q={{ q|urlencode }}&status=staff">Staff</a>
+</div>
+
+<div id="admin-profile-skeleton" class="htmx-indicator skeleton-stack" aria-hidden="true">
+  {% include "components/skeleton_cards.html" %}
+</div>
+<div class="admin-card-stack" id="admin-profile-results">
+  {% include "dashboard/partials/profiles_results.html" %}
+</div>
+{% endblock %}

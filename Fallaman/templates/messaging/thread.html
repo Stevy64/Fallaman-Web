@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load fallaman_tags %}
+{% block title %}{{ other.display_name }} — Messages{% endblock %}
+{% block body_class %}page-chat page-chat-thread {% if conversation.listing.listing_type == 'mission' %}theme-mission{% else %}theme-emploi{% endif %}{% endblock %}
+{% block content %}
+<div class="chat-page page-enter">
+  <div class="chat-stage chat-stage-thread">
+    <div class="container-narrow">
+      <div class="chat-top">
+        <a class="icon-btn" href="{% url 'messaging:inbox' %}" aria-label="Retour"><i class="bi bi-arrow-left"></i></a>
+        <div class="chat-top-meta">
+          <strong>{{ other.display_name }}</strong>
+          <span>{{ conversation.listing.title }}</span>
+        </div>
+        <a class="icon-btn" href="{{ conversation.listing.get_absolute_url }}" aria-label="Voir l'annonce">
+          <i class="bi bi-{% if conversation.listing.listing_type == 'mission' %}lightning-charge{% else %}briefcase{% endif %}"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <section class="container-narrow chat-panel chat-panel-thread">
+    <div class="thread-sheet">
+      {% if expired %}
+        <div class="alert alert-warning mb-0">Cette discussion a expiré. Les messages ont été supprimés.</div>
+      {% else %}
+        <div class="thread-banner">
+          <i class="bi bi-hourglass-split"></i>
+          Temporaire · expire dans {{ remaining_label }}
+          <small>(72 h sans message, max. 7 jours)</small>
+        </div>
+        {% if blocked_either %}
+          <div class="alert alert-warning mb-3">
+            {% if i_blocked %}
+              Vous avez bloqué {{ other.display_name }}. Les messages sont désactivés.
+            {% else %}
+              Messagerie indisponible pour le moment.
+            {% endif %}
+          </div>
+        {% endif %}
+        <div class="message-list">
+          {% for message in chat_messages %}
+            <div class="bubble {% if message.sender_id == user.id %}mine{% endif %}">
+              <p class="mb-0">{{ message.body }}</p>
+            </div>
+          {% empty %}
+            <p class="meta text-center py-3">Commencez la discussion.</p>
+          {% endfor %}
+        </div>
+        {% if not blocked_either %}
+          <form method="post" class="composer">
+            {% csrf_token %}
+            <label class="visually-hidden" for="body">Écrire un message</label>
+            <input class="form-control" id="body" name="body" placeholder="Écrire un message..." maxlength="2000" required>
+            <button class="btn btn-accent" type="submit">Envoyer</button>
+          </form>
+          {% if whatsapp_url %}
+            <a class="btn btn-navy w-100 mt-3" href="{{ whatsapp_url }}" rel="noopener" target="_blank">
+              <i class="bi bi-whatsapp"></i> Continuer sur WhatsApp
+            </a>
+          {% endif %}
+        {% endif %}
+        {% if i_blocked %}
+          <form
+            method="post"
+            action="{% url 'moderation:unblock' other.pk %}"
+            class="mt-3"
+            data-confirm="Vous pourrez à nouveau échanger avec {{ other.display_name }}."
+            data-confirm-title="Débloquer ?"
+            data-confirm-ok="Débloquer"
+          >
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button class="btn btn-accent w-100" type="submit">Débloquer</button>
+          </form>
+        {% else %}
+          <form
+            method="post"
+            action="{% url 'moderation:block' other.pk %}"
+            class="mt-3"
+            data-confirm="{{ other.display_name }} ne pourra plus vous écrire. Vous pourrez le débloquer plus tard depuis cette discussion."
+            data-confirm-title="Bloquer cette personne ?"
+            data-confirm-ok="Bloquer"
+            data-confirm-danger="1"
+          >
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button class="btn btn-outline-navy w-100" type="submit">Bloquer</button>
+          </form>
+        {% endif %}
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% load static %}
+{% load fallaman_tags %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}Fallaman — Trouvez quelqu'un. Trouvez du travail.{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Fallaman met en relation ceux qui cherchent du travail et ceux qui cherchent quelqu'un, simplement, au Gabon.{% endblock %}">
+  <link rel="canonical" href="{% block canonical %}{{ request.build_absolute_uri }}{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}Fallaman{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Trouvez quelqu'un. Trouvez du travail.{% endblock %}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ request.build_absolute_uri }}">
+  <meta property="og:image" content="{% static 'icons/og.png' %}">
+  <meta name="theme-color" content="#FE724C">
+  <link rel="manifest" href="{% url 'core:manifest' %}">
+  <link rel="icon" href="{% static 'icons/icon.svg' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons.min.css' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/fallaman.css' %}?v=26">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <a class="visually-hidden-focusable skip-link" href="#contenu">Aller au contenu</a>
+  {% include "components/staff_return.html" %}
+  {% include "components/navbar.html" %}
+  <main id="contenu" class="page-content">
+    {% if messages %}
+      <div class="container-narrow pt-3">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} shadow-sm" role="status">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  {% include "components/bottom_nav.html" %}
+  {% include "components/footer.html" %}
+  {% include "components/boost_fab.html" %}
+
+  <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+  <div class="bottom-sheet" id="publish-sheet" aria-hidden="true">
+    <div class="sheet-handle"></div>
+    <h2 class="sheet-title">Que voulez-vous publier ?</h2>
+    <div class="sheet-actions">
+      {% if user.is_authenticated %}
+        <a class="sheet-option" href="{% url 'listings:publish' %}?type=employment">
+          <i class="bi bi-briefcase"></i>
+          <span>Une offre d'emploi<small>Travail régulier, plusieurs semaines ou permanent</small></span>
+        </a>
+        <a class="sheet-option" href="{% url 'listings:publish' %}?type=mission">
+          <i class="bi bi-lightning-charge"></i>
+          <span>Une mission<small>Travail ponctuel, aujourd'hui ou quelques jours</small></span>
+        </a>
+      {% else %}
+        <a class="sheet-option" href="{% url 'accounts:login' %}?next=/publier/%3Ftype%3Demployment">
+          <i class="bi bi-briefcase"></i>
+          <span>Une offre d'emploi<small>Connectez-vous pour publier en 2 minutes</small></span>
+        </a>
+        <a class="sheet-option" href="{% url 'accounts:login' %}?next=/publier/%3Ftype%3Dmission">
+          <i class="bi bi-lightning-charge"></i>
+          <span>Une mission<small>Connectez-vous pour publier en 2 minutes</small></span>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div
+    class="bottom-sheet"
+    id="confirm-sheet"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="confirm-sheet-title"
+    aria-hidden="true"
+  >
+    <div class="sheet-handle"></div>
+    <h2 class="sheet-title" id="confirm-sheet-title">Confirmer</h2>
+    <p class="confirm-sheet-text" id="confirm-sheet-text"></p>
+    <div class="confirm-sheet-actions">
+      <button type="button" class="btn btn-outline-navy w-100" data-confirm-cancel>Annuler</button>
+      <button type="button" class="btn btn-accent w-100" id="confirm-sheet-ok">Confirmer</button>
+    </div>
+  </div>
+
+  <div
+    class="app-loader"
+    id="app-loader"
+    hidden
+    aria-hidden="true"
+    role="status"
+    aria-live="polite"
+    aria-label="Chargement"
+  >
+    <div class="app-loader-card">
+      <span class="app-spinner" aria-hidden="true"></span>
+      <span>Chargement…</span>
+    </div>
+  </div>
+
+  <script src="{% static 'vendor/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'vendor/htmx.min.js' %}"></script>
+  <script src="{% static 'js/app.js' %}?v=12"></script>
+</body>
+</html>

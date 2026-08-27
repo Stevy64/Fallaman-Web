@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ category.name }} — Fallaman{% endblock %}
+{% block content %}
+<section class="container-narrow py-4 page-enter">
+  <h1>{{ category.name }}</h1>
+  <div class="chip-row mb-3">
+    {% for profession in category.professions.all %}
+      <a class="chip" href="{% url 'listings:search' %}?q={{ profession.name|urlencode }}">{{ profession.name }}</a>
+    {% endfor %}
+  </div>
+  <div class="listing-stack">
+    {% for listing in listings %}
+      {% include "components/listing_card.html" %}
+    {% empty %}
+      <div class="empty-state"><p>Pas encore d'annonce dans cette catégorie.</p></div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

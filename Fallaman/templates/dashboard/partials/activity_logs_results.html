@@ -1,0 +1,19 @@
+{% for item in logs %}
+  <article class="admin-row admin-log-row is-{{ item.level }}">
+    <div>
+      <strong>{{ item.action }}</strong>
+      <p>{{ item.message|truncatechars:140 }}</p>
+      <p class="meta mb-0">
+        <span class="admin-pill is-{{ item.level }}">{{ item.get_level_display }}</span>
+        {{ item.get_category_display }}
+        {% if item.user %} · {{ item.user.display_name }}{% endif %}
+        {% if item.status_code %} · HTTP {{ item.status_code }}{% endif %}
+        {% if item.duration_ms %} · {{ item.duration_ms }} ms{% endif %}
+        · {{ item.created_at|date:"d/m/Y H:i:s" }}
+      </p>
+    </div>
+  </article>
+{% empty %}
+  <p class="admin-empty">Aucune activité enregistrée.</p>
+{% endfor %}
+{% include "dashboard/_pager.html" with page_obj=logs %}

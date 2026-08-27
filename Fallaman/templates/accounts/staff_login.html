@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Connexion équipe — Fallaman{% endblock %}
+{% block body_class %}page-auth{% endblock %}
+{% block content %}
+<div class="auth-page page-enter">
+  <div class="container-narrow">
+    <div class="auth-top">
+      <a class="icon-btn" href="{% url 'accounts:login' %}" aria-label="Retour"><i class="bi bi-arrow-left"></i></a>
+      <span class="brand-mini">Fallaman</span>
+      <span class="auth-top-spacer" aria-hidden="true"></span>
+    </div>
+
+    <article class="auth-sheet">
+      <div class="auth-sheet-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></div>
+      <div class="auth-header">
+        <p class="step-pill"><i class="bi bi-shield-check"></i> Accès staff</p>
+        <h1>Connexion équipe</h1>
+        <p class="lead mb-0">Pour le tableau de bord et l'administration.</p>
+      </div>
+
+      {% if dev_hint %}
+        <div class="alert alert-info">
+          Compte local : <strong>+24106111111</strong><br>
+          Mot de passe : <code>FallamanAdmin2026!</code>
+          <span class="d-block mt-1 small">Le <code>!</code> final compte. Désactivez l'autofill du navigateur s'il met un autre mot de passe.</span>
+        </div>
+        <form method="post" action="{% url 'accounts:staff_demo_login' %}" class="mb-3">
+          {% csrf_token %}
+          <button class="btn btn-navy w-100" type="submit">Connexion démo (sans mot de passe)</button>
+        </form>
+      {% endif %}
+
+      <form method="post" class="stack-form auth-form" autocomplete="off">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {{ form.next }}
+        <label for="{{ form.phone_number.id_for_label }}">{{ form.phone_number.label }}</label>
+        {{ form.phone_number }}
+        {{ form.phone_number.errors }}
+        <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+        {{ form.password }}
+        {{ form.password.errors }}
+        <button class="btn btn-accent w-100 btn-lg" type="submit">Se connecter</button>
+      </form>
+      <p class="meta auth-foot mb-0">
+        <a href="{% url 'accounts:login' %}">Connexion membre</a>
+      </p>
+    </article>
+  </div>
+</div>
+{% endblock %}

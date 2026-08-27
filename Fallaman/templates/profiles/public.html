@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ profile }} — Fallaman{% endblock %}
+{% block content %}
+<section class="container-narrow py-4 page-enter">
+  {% if staff_return_url %}
+    <p class="admin-back mb-3">
+      <a href="{{ staff_return_url }}"><i class="bi bi-arrow-left"></i> Tableau de bord</a>
+    </p>
+  {% endif %}
+  <div class="page-shell mb-3">
+    <div class="profile-hero">
+      {% include "components/avatar.html" with profile=profile name=profile.display_name size_class="avatar-xl" %}
+      <div>
+        <h1 class="h4 mb-1">{{ profile.display_name|default:"Membre Fallaman" }}</h1>
+        {% if profile.user.phone_verified %}<p class="verified mb-2"><i class="bi bi-patch-check-fill"></i> Téléphone vérifié</p>{% endif %}
+        {% if profile.is_recommended %}
+          <p class="boost-live-banner mb-2">
+            <i class="bi bi-rocket-takeoff-fill" aria-hidden="true"></i>
+            Profil recommandé
+            {% if profile.recommended_until %} jusqu'au {{ profile.recommended_until|date:"d/m/Y H:i" }}{% endif %}
+          </p>
+        {% endif %}
+        {% if profile.bio %}<p class="mb-0">{{ profile.bio }}</p>{% else %}<p class="meta mb-0">Pas de bio pour le moment.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="section-head">
+    <h2 class="section-title mb-0">Annonces</h2>
+  </div>
+  <div class="listing-stack mt-3">
+    {% for listing in listings %}
+      {% include "components/listing_card.html" %}
+    {% empty %}
+      <div class="empty-state"><p>Pas d'annonce publique pour le moment.</p></div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% for convo in conversations %}
+  <a class="admin-row" href="{% url 'dashboard:conversation_detail' convo.pk %}">
+    <div>
+      <strong>{{ convo.listing.title }}</strong>
+      <p>
+        {{ convo.user_low.display_name }} ↔ {{ convo.user_high.display_name }}
+        · {{ convo.message_count }} msg
+        {% if convo.is_expired %} · expirée{% endif %}
+      </p>
+    </div>
+    <i class="bi bi-chevron-right"></i>
+  </a>
+{% empty %}
+  <p class="admin-empty">Aucune conversation.</p>
+{% endfor %}
+{% include "dashboard/_pager.html" with page_obj=conversations %}

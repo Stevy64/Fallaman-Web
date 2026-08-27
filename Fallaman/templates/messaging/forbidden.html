@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Discussion inaccessible — Fallaman{% endblock %}
+{% block content %}
+<section class="container-narrow py-5 page-enter">
+  <div class="page-shell empty-state">
+    <h1>Discussion inaccessible</h1>
+    <p class="meta">Vous ne pouvez pas ouvrir cette discussion.</p>
+    <a class="btn btn-accent" href="{% url 'messaging:inbox' %}">Retour aux messages</a>
+  </div>
+</section>
+{% endblock %}

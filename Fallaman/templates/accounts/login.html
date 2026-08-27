@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Connexion — Fallaman{% endblock %}
+{% block body_class %}page-auth{% endblock %}
+{% block content %}
+<div class="auth-page page-enter">
+  <div class="container-narrow">
+    <div class="auth-top">
+      <a class="icon-btn" href="{% url 'core:home' %}" aria-label="Retour"><i class="bi bi-arrow-left"></i></a>
+      <span class="brand-mini">Fallaman</span>
+      <span class="auth-top-spacer" aria-hidden="true"></span>
+    </div>
+
+    <article class="auth-sheet">
+      <div class="auth-sheet-icon"><i class="bi bi-phone-fill" aria-hidden="true"></i></div>
+      <div class="auth-header">
+        {% if "/favoris" in request.GET.next %}
+          <p class="step-pill"><i class="bi bi-heart"></i> Favoris</p>
+          <h1>Vos annonces likées</h1>
+          <p class="lead">Connectez-vous pour retrouver vos favoris.</p>
+        {% else %}
+          <p class="step-pill"><i class="bi bi-phone"></i> Connexion</p>
+          <h1>Bienvenue sur Fallaman</h1>
+          <p class="lead">Le travail et les opportunités, simplement.</p>
+        {% endif %}
+        <p class="meta mb-0">Entrez votre numéro et votre mot de passe.</p>
+      </div>
+
+      <form method="post" class="stack-form auth-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {{ form.next }}
+        <label for="{{ form.phone_number.id_for_label }}">{{ form.phone_number.label }}</label>
+        {{ form.phone_number }}
+        {{ form.phone_number.errors }}
+        <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+        {{ form.password }}
+        {{ form.password.errors }}
+        <button class="btn btn-accent w-100 btn-lg" type="submit">Se connecter</button>
+      </form>
+
+      <p class="meta auth-foot mb-1">
+        <a href="{% url 'accounts:activate' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">
+          Première connexion ou mot de passe oublié ?
+        </a>
+      </p>
+      <p class="meta auth-foot mb-0">
+        <a href="{% url 'accounts:staff_login' %}">Accès équipe</a>
+      </p>
+    </article>
+  </div>
+</div>
+{% endblock %}

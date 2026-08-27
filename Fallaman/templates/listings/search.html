@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Rechercher — Fallaman{% endblock %}
+{% block body_class %}page-search{% endblock %}
+{% block content %}
+<div class="search-page page-enter">
+  <section class="search-stage">
+    <div class="container-narrow">
+      <header class="search-stage-bar">
+        <p class="search-stage-kicker">Fallaman</p>
+        <h1>Rechercher</h1>
+      </header>
+    </div>
+    <div class="search-sheet">
+      <div class="container-narrow">
+        <form class="search-shell" action="{% url 'listings:search' %}" method="get" hx-get="{% url 'listings:search' %}" hx-target="#results" hx-push-url="true" hx-trigger="submit, keyup changed delay:400ms from:input[name=q]" hx-indicator="#search-skeleton">
+          <i class="bi bi-search"></i>
+          <input type="search" name="q" value="{{ query }}" placeholder="Nounou, chauffeur, maçon..." autocomplete="off" enterkeyhint="search">
+          <button class="btn btn-accent" type="submit">Rechercher</button>
+        </form>
+
+        <div class="filter-toolbar">
+          <button class="filter-pill" type="button" data-sheet-open="filter-sheet">
+            <i class="bi bi-sliders2"></i> Filtres
+          </button>
+          <form method="get" hx-get="{% url 'listings:search' %}" hx-target="#results" hx-push-url="true" hx-indicator="#search-skeleton" class="d-inline">
+            <input type="hidden" name="q" value="{{ query }}">
+            <input type="hidden" name="type" value="{{ request.GET.type }}">
+            <input type="hidden" name="city" value="{{ request.GET.city }}">
+            <select class="filter-pill" name="sort" onchange="this.form.requestSubmit()" aria-label="Trier">
+              <option value="recent" {% if request.GET.sort != 'salary' %}selected{% endif %}>Récentes</option>
+              <option value="salary" {% if request.GET.sort == 'salary' %}selected{% endif %}>Rémunération</option>
+            </select>
+          </form>
+        </div>
+
+        <div class="chip-row">
+          {% for term in popular_terms %}
+            <a class="chip {% if query == term %}is-active{% endif %}" href="{% url 'listings:search' %}?q={{ term|urlencode }}">{{ term }}</a>
+          {% empty %}
+            <a class="chip {% if not query %}is-active{% endif %}" href="{% url 'listings:search' %}">Toutes</a>
+            <a class="chip {% if query == 'Nounou' %}is-active{% endif %}" href="{% url 'listings:search' %}?q=Nounou">Nounou</a>
+            <a class="chip {% if query == 'Chauffeur' %}is-active{% endif %}" href="{% url 'listings:search' %}?q=Chauffeur">Chauffeur</a>
+            <a class="chip {% if query == 'Maçon' %}is-active{% endif %}" href="{% url 'listings:search' %}?q=Maçon">Maçon</a>
+            <a class="chip {% if query == 'Mission' %}is-active{% endif %}" href="{% url 'listings:search' %}?type=mission">Mission</a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="container-narrow search-body">
+    <div class="section-head">
+      <h2 class="section-title mb-0">Annonces trouvées</h2>
+    </div>
+    <div id="search-skeleton" class="htmx-indicator skeleton-stack mt-3" aria-hidden="true">
+      {% include "components/skeleton_cards.html" %}
+    </div>
+    <div id="results" class="mt-3">
+      {% include "listings/partials/results.html" %}
+    </div>
+
+    {% if user.is_authenticated and query %}
+      <form method="post" action="{% url 'listings:create_alert' %}" class="mt-3">
+        {% csrf_token %}
+        <input type="hidden" name="q" value="{{ query }}">
+        <input type="hidden" name="city" value="{{ request.GET.city }}">
+        <input type="hidden" name="type" value="{{ request.GET.type }}">
+        <button class="btn btn-outline-navy w-100" type="submit">M'alerter des nouveaux postes</button>
+      </form>
+    {% endif %}
+  </section>
+</div>
+
+<div class="bottom-sheet" id="filter-sheet" aria-hidden="true">
+  <div class="sheet-handle"></div>
+  <h2 class="sheet-title">Filtres</h2>
+  <form method="get" action="{% url 'listings:search' %}" class="stack-form" hx-get="{% url 'listings:search' %}" hx-target="#results" hx-push-url="true" hx-indicator="#search-skeleton">
+    <input type="hidden" name="q" value="{{ query }}">
+    <label for="filter-type">Type d'annonce</label>
+    <div class="chip-choice-row">
+      <label class="chip-choice"><input type="radio" name="type" value="" {% if not request.GET.type %}checked{% endif %}> Tous</label>
+      <label class="chip-choice"><input type="radio" name="type" value="employment" {% if request.GET.type == 'employment' %}checked{% endif %}> Emploi</label>
+      <label class="chip-choice"><input type="radio" name="type" value="mission" {% if request.GET.type == 'mission' %}checked{% endif %}> Mission</label>
+    </div>
+    <label for="filter-city">Ville</label>
+    <input class="form-control" id="filter-city" type="text" name="city_name" list="city-suggestions" value="{{ request.GET.city_name }}" placeholder="Ex. Libreville" autocomplete="off">
+    <datalist id="city-suggestions">
+      {% for city in cities %}
+        <option value="{{ city.name }}"></option>
+      {% endfor %}
+    </datalist>
+    <button class="btn btn-accent w-100" type="submit" data-sheet-close>Appliquer</button>
+  </form>
+</div>
+{% endblock %}

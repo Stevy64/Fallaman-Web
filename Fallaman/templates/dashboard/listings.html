@@ -1,0 +1,42 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Annonces — Admin Fallaman{% endblock %}
+{% block admin_kicker %}Contenu{% endblock %}
+{% block admin_title %}Annonces{% endblock %}
+{% block admin %}
+<form
+  class="admin-toolbar admin-reveal"
+  method="get"
+  style="--d:.04s"
+  hx-get="{% url 'dashboard:listings' %}"
+  hx-target="#admin-listing-results"
+  hx-trigger="submit, keyup changed delay:350ms from:input[name=q], change from:select[name=type]"
+  hx-push-url="true"
+  hx-indicator="#admin-listing-skeleton"
+>
+  <label class="visually-hidden" for="admin-listing-q">Rechercher une annonce</label>
+  <input id="admin-listing-q" class="form-control" type="search" name="q" value="{{ q }}" placeholder="Titre, auteur, téléphone…" enterkeyhint="search" autocomplete="off">
+  <input type="hidden" name="status" value="{{ status }}">
+  <select class="form-select" name="type" aria-label="Type">
+    <option value="">Tous types</option>
+    <option value="employment" {% if listing_type == 'employment' %}selected{% endif %}>Emploi</option>
+    <option value="mission" {% if listing_type == 'mission' %}selected{% endif %}>Mission</option>
+  </select>
+  <button class="btn btn-navy" type="submit">Chercher</button>
+</form>
+
+<div class="admin-filters admin-reveal" style="--d:.08s">
+  <a class="{% if status == 'all' %}is-on{% endif %}" href="?q={{ q|urlencode }}&type={{ listing_type }}&status=all">Toutes</a>
+  <a class="{% if status == 'pending_moderation' %}is-on{% endif %}" href="?q={{ q|urlencode }}&type={{ listing_type }}&status=pending_moderation">À modérer</a>
+  <a class="{% if status == 'published' %}is-on{% endif %}" href="?q={{ q|urlencode }}&type={{ listing_type }}&status=published">En ligne</a>
+  <a class="{% if status == 'hidden' %}is-on{% endif %}" href="?q={{ q|urlencode }}&type={{ listing_type }}&status=hidden">Masquées</a>
+  <a class="{% if status == 'expired' %}is-on{% endif %}" href="?q={{ q|urlencode }}&type={{ listing_type }}&status=expired">Expirées</a>
+  <a class="{% if status == 'rejected' %}is-on{% endif %}" href="?q={{ q|urlencode }}&type={{ listing_type }}&status=rejected">Rejetées</a>
+</div>
+
+<div id="admin-listing-skeleton" class="htmx-indicator skeleton-stack" aria-hidden="true">
+  {% include "components/skeleton_cards.html" %}
+</div>
+<div class="admin-card-stack" id="admin-listing-results">
+  {% include "dashboard/partials/listings_results.html" %}
+</div>
+{% endblock %}

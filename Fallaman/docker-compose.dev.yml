@@ -1,0 +1,134 @@
+# ════════════════════════════════════════════
+# FALLAMAN — Dev local (hot reload)
+# Usage : docker compose -f docker-compose.dev.yml up --build
+#         .\dev.ps1
+#         make dev
+# ════════════════════════════════════════════
+
+x-django-env: &django-env
+  DJANGO_SETTINGS_MODULE: config.settings.development
+  DJANGO_SECRET_KEY: dev-secret-key-uniquement-pour-le-dev-local
+  DJANGO_DEBUG: "true"
+  DJANGO_ALLOWED_HOSTS: "*"
+  DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000,http://localhost:8001,http://127.0.0.1:8001
+  DATABASE_URL: postgres://fallaman:fallaman@db:5432/fallaman
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  CELERY_TASK_ALWAYS_EAGER: "false"
+  # En local, le code s'affiche dans les logs du conteneur web.
+  # Pour tester un vrai envoi : OTP_PROVIDER=email + les réglages EMAIL_*.
+  OTP_PROVIDER: console
+  OTP_DEV_CODE: "123456"
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    container_name: fallaman-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fallaman
+      POSTGRES_USER: fallaman
+      POSTGRES_PASSWORD: fallaman
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fallaman"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fallaman-dev-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: fallaman-redis-dev
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fallaman-dev-net
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: fallaman-web-dev
+    restart: unless-stopped
+    volumes:
+      - .:/app
+      - /app/.venv
+    ports:
+      - "8001:8000"
+    environment:
+      <<: *django-env
+      RUN_MIGRATIONS: "true"
+      SEED_DEMO: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fallaman-dev-net
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py seed_demo --with-accounts &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: fallaman-celery-dev
+    volumes:
+      - .:/app
+      - /app/.venv
+    environment:
+      <<: *django-env
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fallaman-dev-net
+    command: celery -A config worker --loglevel=debug --concurrency=1
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: fallaman-beat-dev
+    volumes:
+      - .:/app
+      - /app/.venv
+    environment:
+      <<: *django-env
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fallaman-dev-net
+    command: celery -A config beat --loglevel=info --schedule /tmp/celerybeat-schedule
+
+volumes:
+  postgres_dev_data:
+
+networks:
+  fallaman-dev-net:
+    driver: bridge

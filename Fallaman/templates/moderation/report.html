@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Signaler — Fallaman{% endblock %}
+{% block content %}
+<section class="container-narrow py-4 page-enter">
+  <div class="page-shell">
+    <p class="step-pill"><i class="bi bi-flag"></i> Sécurité</p>
+    <h1>Signaler cette annonce</h1>
+    <form
+      method="post"
+      class="stack-form mt-3"
+      data-confirm="Votre signalement sera transmis à l'équipe Fallaman pour examen."
+      data-confirm-title="Envoyer le signalement ?"
+      data-confirm-ok="Signaler"
+      data-confirm-danger="1"
+    >
+      {% csrf_token %}
+      {% for value, label in reasons %}
+        <label class="choice"><input type="radio" name="reason" value="{{ value }}" required> {{ label }}</label>
+      {% endfor %}
+      <textarea class="form-control" name="details" rows="3" placeholder="Détails (facultatif)"></textarea>
+      <button class="btn btn-accent w-100" type="submit">Envoyer le signalement</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

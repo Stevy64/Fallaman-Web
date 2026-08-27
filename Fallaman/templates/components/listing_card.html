@@ -1,0 +1,69 @@
+{% load fallaman_tags %}
+<article class="listing-card {% if listing.is_boosted %}is-boosted{% endif %}">
+  <a class="listing-card-hit" href="{{ listing.get_absolute_url }}" aria-label="Voir {{ listing.title }}"></a>
+  {% if listing.is_boosted %}
+    <div class="listing-boost-ribbon" aria-label="Annonce recommandée">
+      <i class="bi bi-rocket-takeoff-fill" aria-hidden="true"></i>
+      Recommandée
+      {% if listing.boosted_until %}
+        <span>· jusqu'au {{ listing.boosted_until|date:"d/m" }}</span>
+      {% endif %}
+    </div>
+  {% endif %}
+  <div class="listing-card-body">
+    <div class="listing-card-head">
+      <div class="listing-logo {% if listing.listing_type == 'mission' %}is-mission{% endif %}">
+        {% if listing.listing_type == 'mission' %}
+          <i class="bi bi-lightning-charge-fill"></i>
+        {% else %}
+          <i class="bi bi-briefcase-fill"></i>
+        {% endif %}
+      </div>
+      <div class="listing-card-meta">
+        <div class="author-line">
+          <span>{{ listing.author.display_name }}</span>
+          {% if listing.author.phone_verified %}
+            <span class="verified-pill"><i class="bi bi-patch-check-fill"></i></span>
+          {% endif %}
+        </div>
+        <h3>{{ listing.title }}</h3>
+        <p class="card-location"><i class="bi bi-geo-alt-fill"></i> {{ listing.location_label }}</p>
+      </div>
+      <div class="listing-card-actions">
+        {% if user.is_authenticated %}
+          <form method="post" action="{% url 'listings:favorite' listing.pk %}" hx-post="{% url 'listings:favorite' listing.pk %}" hx-swap="outerHTML" class="favorite-form">
+            {% csrf_token %}
+            <button class="bookmark-btn {% if listing.id in favorite_ids %}is-on{% endif %}" type="submit" aria-label="Sauvegarder">
+              <i class="bi {% if listing.id in favorite_ids %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+            </button>
+          </form>
+        {% else %}
+          <a class="bookmark-btn" href="{% url 'accounts:login' %}?next={{ listing.get_absolute_url }}" aria-label="Sauvegarder">
+            <i class="bi bi-heart"></i>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+    <p class="salary">{{ listing.salary_label }}</p>
+    <div class="tag-row">
+      {% if listing.is_boosted %}
+        <span class="tag is-boost"><i class="bi bi-stars"></i> Recommandée</span>
+      {% endif %}
+      <span class="tag {% if listing.listing_type == 'mission' %}is-mission{% else %}is-type{% endif %}">
+        {% if listing.listing_type == 'mission' %}Mission{% else %}Emploi{% endif %}
+      </span>
+      {% if listing.duration %}
+        <span class="tag"><i class="bi bi-clock"></i> {{ listing.get_duration_display }}</span>
+      {% endif %}
+      {% if listing.availability %}
+        <span class="tag"><i class="bi bi-calendar3"></i> {{ listing.get_availability_display }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="listing-card-foot">
+    <p class="meta"><i class="bi bi-clock-history"></i> {{ listing.published_at|relative }}</p>
+    <span class="btn-apply-mini">
+      Voir <i class="bi bi-arrow-right"></i>
+    </span>
+  </div>
+</article>

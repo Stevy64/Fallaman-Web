@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Conditions — Fallaman{% endblock %}
+{% block content %}
+<section class="container-narrow py-4 page-enter">
+  <div class="page-shell">
+    {% include "components/wizard_bar.html" %}
+    <h1>Combien proposez-vous ?</h1>
+    <form method="post" class="stack-form mt-3">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="field-error">{{ form.non_field_errors }}</div>{% endif %}
+      {% include "components/form_fields.html" %}
+      <button class="btn btn-accent w-100 btn-lg" type="submit">Continuer</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

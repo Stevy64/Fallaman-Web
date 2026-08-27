@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Quel métier ? — Fallaman{% endblock %}
+{% block content %}
+<section class="container-narrow py-4 page-enter">
+  <div class="page-shell">
+    {% include "components/wizard_bar.html" %}
+    <h1>Quel métier recherchez-vous ?</h1>
+    <p class="meta mb-3">Choisissez une suggestion ou saisissez le métier librement.</p>
+    <form method="post" class="stack-form mt-3">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="field-error">{{ form.non_field_errors }}</div>{% endif %}
+      {% include "components/form_fields.html" %}
+      {% include "components/suggestions_datalist.html" %}
+      <button class="btn btn-accent w-100 btn-lg" type="submit">Continuer</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

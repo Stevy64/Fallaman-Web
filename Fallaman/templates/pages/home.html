@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% load static %}
+{% load fallaman_tags %}
+
+{% block body_class %}page-home{% endblock %}
+{% block content %}
+<div class="page-enter">
+  <section class="hero-stage reveal">
+    <div class="hero-stage-bg" aria-hidden="true" style="--hero-image: url('{% static 'images/hero-fallaman.png' %}')"></div>
+    <div class="container-narrow hero-stage-content">
+      <div class="hero-store" role="group" aria-label="Télécharger l'application Fallaman">
+        <a
+          class="hero-store-btn"
+          href="{{ android_app_url }}"
+          {% if android_app_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+        >
+          <i class="bi bi-android2" aria-hidden="true"></i>
+          <span class="hero-store-copy">
+            <small>Télécharger</small>
+            <strong>Android</strong>
+          </span>
+        </a>
+        <a
+          class="hero-store-btn"
+          href="{{ ios_app_url }}"
+          {% if ios_app_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+        >
+          <i class="bi bi-apple" aria-hidden="true"></i>
+          <span class="hero-store-copy">
+            <small>Télécharger</small>
+            <strong>iOS</strong>
+          </span>
+        </a>
+      </div>
+      <h1>Un Fallaman, un Boulot</h1>
+      <p class="hero-lead">La plateforme des Fallaman — Simple et Gratuit</p>
+
+      <form class="hero-search hero-search-overlay" action="{% url 'listings:search' %}" method="get">
+        <label class="visually-hidden" for="home-search">Que recherchez-vous ?</label>
+        <i class="bi bi-search"></i>
+        <input id="home-search" type="search" name="q" placeholder="Nounou, chauffeur, maçon..." value="" autocomplete="off">
+        <button type="submit" class="btn btn-accent">Rechercher</button>
+      </form>
+
+      <div class="hero-stats">
+        <span><i class="bi bi-briefcase"></i> Emplois</span>
+        <span><i class="bi bi-lightning-charge"></i> Missions</span>
+        <span><i class="bi bi-people"></i> {{ listing_count }} annonce{{ listing_count|pluralize }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-panel">
+    <div class="container-narrow">
+    <div class="intent-section reveal">
+      <h2 class="section-title">Que voulez-vous faire ?</h2>
+      <div class="intent-grid intent-grid-2">
+        <a class="intent-card" href="{% url 'listings:search' %}">
+          <span class="intent-icon"><i class="bi bi-briefcase-fill"></i></span>
+          <strong>Trouver du travail</strong>
+          <span>Emplois et missions près de chez vous.</span>
+        </a>
+        <button class="intent-card" type="button" data-sheet-open="publish-sheet">
+          <span class="intent-icon is-publish"><i class="bi bi-megaphone-fill"></i></span>
+          <strong>Publier une offre</strong>
+          <span>Publiez une annonce en 2 minutes.</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="section-head reveal">
+      <h2 class="section-title mb-0">Recherches populaires</h2>
+    </div>
+    <div class="chip-row reveal">
+      {% for term in popular_searches %}
+        <a class="chip" href="{% url 'listings:search' %}?q={{ term|urlencode }}">{{ term }}</a>
+      {% endfor %}
+    </div>
+
+    <div class="section-head reveal">
+      <h2 class="section-title mb-0">{% if recommended %}Pour vous{% else %}Annonces récentes{% endif %}</h2>
+      <a href="{% url 'listings:search' %}">Tout voir <i class="bi bi-chevron-right"></i></a>
+    </div>
+    <div class="listing-stack mt-3">
+      {% for listing in listings %}
+        {% include "components/listing_card.html" %}
+      {% empty %}
+        <div class="empty-state reveal">
+          <p>Les premières annonces apparaîtront ici.</p>
+          <button class="btn btn-accent" type="button" data-sheet-open="publish-sheet">Publier une annonce</button>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="section-head reveal">
+      <h2 class="section-title mb-0">Toutes les catégories</h2>
+      <a href="{% url 'taxonomy:list' %}">Voir <i class="bi bi-chevron-right"></i></a>
+    </div>
+    <div class="category-grid reveal">
+      {% for category in categories %}
+        <a class="category-tile" href="{% url 'taxonomy:detail' category.slug %}">
+          <i class="bi bi-grid"></i> {{ category.name }}
+        </a>
+      {% endfor %}
+    </div>
+
+    <p class="safety-banner mt-4 reveal"><i class="bi bi-shield-check"></i> L'application Fallaman est gratuite et le restera.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

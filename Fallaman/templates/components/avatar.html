@@ -1,0 +1,19 @@
+{% comment %}
+Expects: profile (optional), name (optional display name), size_class (optional).
+{% endcomment %}
+{% with p=profile|default:None %}
+  {% if p and p.avatar %}
+    <img
+      class="avatar{% if size_class %} {{ size_class }}{% endif %}"
+      src="{{ p.avatar.url }}"
+      alt="{% if name %}{{ name }}{% elif p.display_name %}{{ p.display_name }}{% else %}Photo de profil{% endif %}"
+      width="40"
+      height="40"
+      loading="lazy"
+    >
+  {% else %}
+    <span class="avatar{% if size_class %} {{ size_class }}{% endif %}" aria-hidden="true">
+      {% if name %}{{ name|make_list|first|upper }}{% elif p and p.display_name %}{{ p.display_name|make_list|first|upper }}{% else %}F{% endif %}
+    </span>
+  {% endif %}
+{% endwith %}

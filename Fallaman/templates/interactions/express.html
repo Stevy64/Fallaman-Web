@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Je suis intéressé — Fallaman{% endblock %}
+{% block content %}
+<section class="container-narrow py-4 page-enter">
+  <div class="detail-sheet" style="border-radius:24px;margin:0;animation:rise-in .45s var(--ease-out)">
+    <div class="p-4">
+      <h1 class="h4">Vous êtes intéressé</h1>
+      <p class="meta">{{ listing.title }} · {{ listing.location_label }}</p>
+      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+      <form method="post" class="stack-form mt-3">
+        {% csrf_token %}
+        <label for="message">Ajoutez un petit message (facultatif)</label>
+        <textarea class="form-control" id="message" name="message" rows="4" placeholder="Bonjour, je suis disponible et j'ai 3 ans d'expérience."></textarea>
+        <button class="btn btn-accent w-100 btn-lg" type="submit">Envoyer</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

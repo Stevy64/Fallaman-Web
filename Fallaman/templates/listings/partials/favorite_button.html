@@ -1,0 +1,6 @@
+<form method="post" action="{% url 'listings:favorite' listing.pk %}" hx-post="{% url 'listings:favorite' listing.pk %}" hx-swap="outerHTML" class="favorite-form">
+  {% csrf_token %}
+  <button class="bookmark-btn {% if is_favorite %}is-on{% endif %}" type="submit" aria-label="Sauvegarder">
+    <i class="bi {% if is_favorite %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+  </button>
+</form>

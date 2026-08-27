@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Première connexion — Fallaman{% endblock %}
+{% block body_class %}page-auth{% endblock %}
+{% block content %}
+<div class="auth-page page-enter">
+  <div class="container-narrow">
+    <div class="auth-top">
+      <a class="icon-btn" href="{% url 'accounts:login' %}" aria-label="Retour"><i class="bi bi-arrow-left"></i></a>
+      <span class="brand-mini">Fallaman</span>
+      <span class="auth-top-spacer" aria-hidden="true"></span>
+    </div>
+
+    <article class="auth-sheet">
+      <div class="auth-sheet-icon"><i class="bi bi-envelope-fill" aria-hidden="true"></i></div>
+      <div class="auth-header">
+        <p class="step-pill"><i class="bi bi-key"></i> Activation</p>
+        <h1>Recevez votre code</h1>
+        <p class="lead">Première connexion, ou mot de passe oublié.</p>
+        <p class="meta mb-0">
+          Nous vous envoyons un code par e-mail. Vous choisirez ensuite votre
+          mot de passe.
+        </p>
+      </div>
+
+      <form method="post" class="stack-form auth-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {{ form.next }}
+        <label for="{{ form.phone_number.id_for_label }}">{{ form.phone_number.label }}</label>
+        {{ form.phone_number }}
+        {{ form.phone_number.errors }}
+        <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+        {{ form.email }}
+        <p class="meta mb-0">{{ form.email.help_text }}</p>
+        {{ form.email.errors }}
+        <button class="btn btn-accent w-100 btn-lg" type="submit">Recevoir le code</button>
+      </form>
+
+      <p class="meta auth-foot mb-0">
+        <a href="{% url 'accounts:login' %}">J'ai déjà un mot de passe</a>
+      </p>
+    </article>
+  </div>
+</div>
+{% endblock %}

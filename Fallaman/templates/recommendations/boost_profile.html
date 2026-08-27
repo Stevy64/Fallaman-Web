@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load fallaman_tags %}
+{% block title %}Être recommandé — Fallaman{% endblock %}
+{% block content %}
+<section class="container-narrow py-4 page-enter">
+  <div class="page-shell reco-shell">
+    <a class="meta d-inline-flex align-items-center gap-1 mb-3" href="{% url 'profiles:mine' %}">
+      <i class="bi bi-arrow-left"></i> Mon profil
+    </a>
+    <p class="reco-kicker"><i class="bi bi-person-bounding-box"></i> Demandeurs d'emploi</p>
+    <h1 class="h4 mb-2">Demander à être recommandé</h1>
+    <p class="meta mb-3">
+      Optionnel : les pourvoyeurs d'offres correspondant à votre métier / ville sont notifiés,
+      et votre profil apparaît en priorité sur leurs annonces.
+    </p>
+
+    <div class="reco-target-card mb-3">
+      <strong>{{ profile.display_name|default:user.display_name }}</strong>
+      <span class="meta">
+        {% if profile.primary_profession %}{{ profile.primary_profession.name }}{% else %}{{ profile.looking_for|default:"Profil" }}{% endif %}
+        {% if profile.city %} · {{ profile.city.name }}{% endif %}
+      </span>
+      {% if is_recommended %}
+        <span class="boost-badge mt-2"><i class="bi bi-stars"></i> Active jusqu'au {{ recommended_until|date:"d/m/Y H:i" }}</span>
+      {% endif %}
+    </div>
+
+    <form method="post" class="reco-quote-form">
+      {% csrf_token %}
+      <fieldset>
+        <legend class="section-title">Durée de la recommandation</legend>
+        <div class="reco-quote-grid">
+          {% for q in quotes %}
+            <label class="reco-quote-card">
+              <input type="radio" name="duration_days" value="{{ q.duration_days }}" {% if forloop.first %}checked{% endif %} required>
+              <span class="reco-quote-days">{{ q.label }}</span>
+              <span class="reco-quote-amount">{{ q.amount|fcfa }}</span>
+              <span class="meta">{{ q.daily_rate|fcfa }}/jour{% if q.discount_percent %} · −{{ q.discount_percent }} %{% endif %}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      <p class="meta mt-3 mb-3">
+        Paiement simple via SingPay. Le montant dépend uniquement de la durée choisie.
+      </p>
+      <button class="btn btn-accent w-100" type="submit">Continuer vers le paiement</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

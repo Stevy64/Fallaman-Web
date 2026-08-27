@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Annonce indisponible — Fallaman{% endblock %}
+{% block content %}
+<section class="container-narrow py-5 page-enter">
+  <div class="page-shell empty-state">
+    <h1>Cette annonce n'est plus disponible.</h1>
+    <p class="meta">Elle a peut-être été retirée ou a expiré.</p>
+    <a class="btn btn-accent" href="{% url 'listings:search' %}">Voir d'autres annonces</a>
+  </div>
+</section>
+{% endblock %}

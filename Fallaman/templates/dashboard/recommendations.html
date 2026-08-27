@@ -1,0 +1,83 @@
+{% extends "dashboard/base.html" %}
+{% load fallaman_tags %}
+{% block title %}Recommandations — Admin Fallaman{% endblock %}
+{% block admin_kicker %}Monétisation{% endblock %}
+{% block admin_title %}Recommandations{% endblock %}
+{% block admin %}
+<section class="admin-kpi-board admin-reveal" aria-label="Revenus">
+  <div class="admin-kpis">
+    <div class="admin-kpi is-listings">
+      <span class="admin-kpi-icon"><i class="bi bi-cash-coin"></i></span>
+      <span>Revenus totaux</span>
+      <strong>{{ revenue|fcfa }}</strong>
+      <small>paiements réussis</small>
+    </div>
+    <div class="admin-kpi is-profiles">
+      <span class="admin-kpi-icon"><i class="bi bi-stars"></i></span>
+      <span>Actives</span>
+      <strong>{{ active_count }}</strong>
+      <small>en cours</small>
+    </div>
+  </div>
+</section>
+
+{% if revenue_by_purpose %}
+<section class="admin-panel admin-reveal">
+  <div class="admin-panel-head"><h2>Répartition</h2></div>
+  {% for row in revenue_by_purpose %}
+    <article class="admin-row">
+      <div>
+        <strong>{% if row.purpose == "listing_boost" %}Boost annonces{% elif row.purpose == "profile_boost" %}Recommandations profil{% else %}{{ row.purpose }}{% endif %}</strong>
+        <p>{{ row.count }} paiement{{ row.count|pluralize }}</p>
+      </div>
+      <strong>{{ row.total|fcfa }}</strong>
+    </article>
+  {% endfor %}
+</section>
+{% endif %}
+
+<section class="admin-panel admin-reveal">
+  <div class="admin-panel-head">
+    <h2>Achats</h2>
+    <div class="admin-filters">
+      <a class="admin-pill {% if status == 'active' %}is-ok{% endif %}" href="?status=active">Actives</a>
+      <a class="admin-pill {% if status == 'all' %}is-ok{% endif %}" href="?status=all">Toutes</a>
+      <a class="admin-pill {% if status == 'expired' %}is-ok{% endif %}" href="?status=expired">Expirées</a>
+    </div>
+  </div>
+  {% for item in purchases %}
+    <article class="admin-row">
+      <div>
+        <strong>{{ item.get_kind_display }} · {{ item.amount|fcfa }}</strong>
+        <p>
+          {{ item.user.display_name }}
+          {% if item.listing %} · {{ item.listing.title }}{% endif %}
+          {% if item.profile %} · {{ item.profile.display_name }}{% endif %}
+          · {{ item.duration_days }} j · {{ item.get_status_display }}
+        </p>
+      </div>
+      <span class="admin-pill {% if item.status == 'active' %}is-ok{% endif %}">{{ item.amount|fcfa }}</span>
+    </article>
+  {% empty %}
+    <p class="admin-empty">Aucune recommandation.</p>
+  {% endfor %}
+  {% include "dashboard/_pager.html" with page_obj=purchases %}
+</section>
+
+<section class="admin-panel admin-reveal">
+  <div class="admin-panel-head"><h2>Mises en relation candidats</h2></div>
+  {% for intro in intros %}
+    <article class="admin-row">
+      <div>
+        <strong>{{ intro.profile.display_name }} → {{ intro.listing.title }}</strong>
+        <p>Pourvoyeur : {{ intro.employer.display_name }} · {{ intro.get_status_display }}</p>
+      </div>
+      <span class="admin-pill {% if intro.status == 'accepted' %}is-ok{% elif intro.status == 'pending' %}is-wait{% else %}is-off{% endif %}">
+        {{ intro.get_status_display }}
+      </span>
+    </article>
+  {% empty %}
+    <p class="admin-empty">Pas encore de mise en relation.</p>
+  {% endfor %}
+</section>
+{% endblock %}

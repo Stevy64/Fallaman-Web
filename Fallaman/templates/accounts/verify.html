@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Votre code — Fallaman{% endblock %}
+{% block body_class %}page-auth{% endblock %}
+{% block content %}
+<div class="auth-page page-enter">
+  <div class="container-narrow">
+    <div class="auth-top">
+      <a class="icon-btn" href="{% url 'accounts:activate' %}" aria-label="Retour"><i class="bi bi-arrow-left"></i></a>
+      <span class="brand-mini">Fallaman</span>
+      <span class="auth-top-spacer" aria-hidden="true"></span>
+    </div>
+
+    <article class="auth-sheet">
+      <div class="auth-sheet-icon"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i></div>
+      <div class="auth-header">
+        <p class="step-pill"><i class="bi bi-shield-lock"></i> Étape 2 sur 3</p>
+        <h1>Entrez le code</h1>
+        <p class="meta mb-0">
+          {% if email %}
+            Un code vient d'être envoyé à <strong>{{ email }}</strong>.
+          {% else %}
+            Un code vient d'être envoyé à l'adresse enregistrée sur ce compte.
+          {% endif %}
+          Pensez à regarder vos courriers indésirables.
+        </p>
+      </div>
+
+      <form method="post" class="stack-form auth-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {{ form.code }}
+        {{ form.code.errors }}
+        <button class="btn btn-accent w-100 btn-lg" type="submit">Continuer</button>
+      </form>
+
+      <p class="meta auth-foot mb-0">
+        <a href="{% url 'accounts:activate' %}">Renvoyer un code</a>
+      </p>
+    </article>
+  </div>
+</div>
+{% endblock %}

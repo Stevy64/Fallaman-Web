@@ -1,0 +1,11 @@
+<footer class="site-footer d-none d-md-block">
+  <div class="container-narrow py-4">
+    <p class="small text-muted mb-2">{{ safety_notice }}</p>
+    <div class="d-flex flex-wrap gap-3 small">
+      <a href="{% url 'core:about' %}">À propos</a>
+      <a href="{% url 'core:safety' %}">Sécurité</a>
+      <a href="{% url 'core:privacy' %}">Confidentialité</a>
+      <a href="{% url 'core:terms' %}">Conditions</a>
+    </div>
+  </div>
+</footer>

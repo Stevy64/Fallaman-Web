@@ -1,0 +1,24 @@
+<nav class="bottom-nav" aria-label="Navigation principale">
+  <a href="{% url 'core:home' %}" class="{% if request.resolver_match.url_name == 'home' %}is-active{% endif %}">
+    <i class="bi bi-house-door{% if request.resolver_match.url_name == 'home' %}-fill{% endif %}"></i>
+    <span>Accueil</span>
+  </a>
+  <a href="{% if user.is_authenticated %}{% url 'listings:favorites' %}{% else %}{% url 'accounts:login' %}?next={% url 'listings:favorites' %}{% endif %}" class="{% if 'favoris' in request.path %}is-active{% endif %}">
+    <i class="bi bi-heart{% if 'favoris' in request.path %}-fill{% endif %}"></i>
+    <span>Favoris</span>
+    {% if favorite_ids %}<span class="badge-dot">{{ favorite_ids|length }}</span>{% endif %}
+  </a>
+  <a href="#" class="publish-tab" data-sheet-open="publish-sheet" role="button">
+    <span class="publish-pill"><i class="bi bi-plus-lg"></i></span>
+    <span>Publier</span>
+  </a>
+  <a href="{% url 'messaging:inbox' %}" class="{% if 'messages' in request.path %}is-active{% endif %}">
+    <i class="bi bi-chat-square-dots{% if 'messages' in request.path %}-fill{% endif %}"></i>
+    <span>Messages</span>
+    {% if unread_messages %}<span class="badge-dot">{{ unread_messages }}</span>{% endif %}
+  </a>
+  <a href="{% if user.is_authenticated %}{% url 'profiles:mine' %}{% else %}{% url 'accounts:login' %}{% endif %}" class="{% if 'profil' in request.path %}is-active{% endif %}">
+    <i class="bi bi-person{% if 'profil' in request.path %}-fill{% endif %}"></i>
+    <span>Profil</span>
+  </a>
+</nav>

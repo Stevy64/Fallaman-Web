@@ -1,0 +1,40 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Journal — Admin Fallaman{% endblock %}
+{% block admin_kicker %}Observabilité{% endblock %}
+{% block admin_title %}Journal d'activité{% endblock %}
+{% block admin %}
+<form
+  class="admin-toolbar admin-reveal"
+  method="get"
+  style="--d:.04s"
+  hx-get="{% url 'dashboard:activity_logs' %}"
+  hx-target="#admin-log-results"
+  hx-trigger="submit, keyup changed delay:350ms from:input[name=q], change from:select"
+  hx-push-url="true"
+  hx-indicator="#admin-log-skeleton"
+>
+  <label class="visually-hidden" for="admin-log-q">Rechercher</label>
+  <input id="admin-log-q" class="form-control" type="search" name="q" value="{{ q }}" placeholder="Action, chemin, téléphone…" enterkeyhint="search" autocomplete="off">
+  <select class="form-select" name="level" aria-label="Niveau">
+    <option value="">Tous niveaux</option>
+    {% for value, label in levels %}
+      <option value="{{ value }}" {% if level == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select class="form-select" name="category" aria-label="Catégorie">
+    <option value="">Toutes catégories</option>
+    {% for value, label in categories %}
+      <option value="{{ value }}" {% if category == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-navy" type="submit">Chercher</button>
+</form>
+
+<div id="admin-log-skeleton" class="htmx-indicator skeleton-stack" aria-hidden="true">
+  {% include "components/skeleton_cards.html" %}
+</div>
+
+<section class="admin-panel admin-reveal" id="admin-log-results" style="--d:.08s">
+  {% include "dashboard/partials/activity_logs_results.html" %}
+</section>
+{% endblock %}

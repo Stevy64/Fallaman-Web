@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Favoris — Fallaman{% endblock %}
+{% block body_class %}page-chat page-favorites{% endblock %}
+{% block content %}
+<div class="chat-page page-enter">
+  <div class="chat-stage theme-favorites">
+    <div class="container-narrow chat-stage-inner">
+      <p class="chat-kicker"><i class="bi bi-heart-fill"></i> Vos coups de cœur</p>
+      <h1>Annonces likées</h1>
+      <p class="chat-lead">Retrouvez ici toutes les offres que vous avez sauvegardées.</p>
+    </div>
+  </div>
+
+  <section class="container-narrow chat-panel">
+    <div class="listing-stack">
+      {% for item in favorites %}
+        {% if item.listing.is_published %}
+          {% include "components/listing_card.html" with listing=item.listing %}
+        {% else %}
+          <article class="listing-card">
+            <div class="listing-card-body">
+              <h3 class="h6">{{ item.listing.title }}</h3>
+              <p class="meta mb-0">Cette annonce n'est plus disponible.</p>
+            </div>
+          </article>
+        {% endif %}
+      {% empty %}
+        <div class="empty-state">
+          <p>Pas encore de favori. Touchez le cœur sur une annonce pour la garder ici.</p>
+          <a class="btn btn-accent" href="{% url 'listings:search' %}">Chercher une annonce</a>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,184 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Tableau de bord — Fallaman{% endblock %}
+{% block admin_kicker %}Pilotage{% endblock %}
+{% block admin_title %}Vue d'ensemble{% endblock %}
+{% block admin %}
+<section class="admin-welcome admin-reveal">
+  <p class="admin-welcome-hello">Bienvenue, {{ user.display_name }}</p>
+  <p class="admin-welcome-text">Voici le point du jour sur Fallaman — profils, annonces et alertes à suivre.</p>
+</section>
+
+<section class="admin-kpi-board admin-reveal" style="--d:.04s" aria-label="Indicateurs">
+  <div class="admin-panel-head">
+    <h2>Indicateurs</h2>
+  </div>
+  <div class="admin-kpis">
+    <a class="admin-kpi is-profiles" href="{% url 'dashboard:profiles' %}">
+      <span class="admin-kpi-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+      <span>Profils</span>
+      <strong>{{ users_count }}</strong>
+      <small>+{{ new_users }} aujourd'hui</small>
+    </a>
+    <a class="admin-kpi is-listings" href="{% url 'dashboard:listings' %}?status=published">
+      <span class="admin-kpi-icon"><i class="bi bi-briefcase-fill" aria-hidden="true"></i></span>
+      <span>Annonces actives</span>
+      <strong>{{ active_listings }}</strong>
+      <small>+{{ new_listings }} aujourd'hui</small>
+    </a>
+    <a class="admin-kpi is-moderate {% if pending_count %}has-pulse{% endif %}" href="{% url 'dashboard:listings' %}?status=pending_moderation">
+      <span class="admin-kpi-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span>
+      <span>À modérer</span>
+      <strong>{{ pending_count }}</strong>
+      <small>en attente</small>
+    </a>
+    <a class="admin-kpi is-reports {% if open_reports %}has-pulse{% endif %}" href="{% url 'dashboard:reports' %}">
+      <span class="admin-kpi-icon"><i class="bi bi-flag-fill" aria-hidden="true"></i></span>
+      <span>Signalements</span>
+      <strong>{{ open_reports }}</strong>
+      <small>{{ messages_today }} messages / j</small>
+    </a>
+  </div>
+</section>
+
+<section class="admin-kpi-board admin-reveal" style="--d:.06s" aria-label="Recommandations">
+  <div class="admin-panel-head">
+    <h2>Recommandations & revenus</h2>
+    <a href="{% url 'dashboard:recommendations' %}">Détail</a>
+  </div>
+  <div class="admin-kpis">
+    <a class="admin-kpi is-listings" href="{% url 'dashboard:recommendations' %}">
+      <span class="admin-kpi-icon"><i class="bi bi-cash-coin" aria-hidden="true"></i></span>
+      <span>Revenus</span>
+      <strong>{{ revenue_total }} F</strong>
+      <small>+{{ revenue_today }} F aujourd'hui</small>
+    </a>
+    <a class="admin-kpi is-profiles" href="{% url 'dashboard:recommendations' %}?status=active">
+      <span class="admin-kpi-icon"><i class="bi bi-stars" aria-hidden="true"></i></span>
+      <span>Recos actives</span>
+      <strong>{{ active_reco_count }}</strong>
+      <small>{{ pending_intros }} en attente d'acceptation</small>
+    </a>
+  </div>
+</section>
+
+<div class="admin-split">
+  <section class="admin-panel admin-reveal" style="--d:.1s">
+    <div class="admin-panel-head">
+      <h2>Modération</h2>
+      <a href="{% url 'dashboard:listings' %}?status=pending_moderation">Tout voir</a>
+    </div>
+    {% for listing in pending_listings %}
+      <article class="admin-row">
+        <div>
+          <strong>{{ listing.title }}</strong>
+          <p>{{ listing.author.display_name }} · {{ listing.city.name|default:"Gabon" }}</p>
+        </div>
+        <form method="post" action="{% url 'dashboard:listing_action' listing.pk 'publish' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'dashboard:home' %}">
+          <button class="btn btn-accent btn-sm" type="submit">Publier</button>
+        </form>
+      </article>
+    {% empty %}
+      <p class="admin-empty">Rien en attente.</p>
+    {% endfor %}
+  </section>
+
+  <section class="admin-panel admin-reveal" style="--d:.14s">
+    <div class="admin-panel-head">
+      <h2>Signalements</h2>
+      <a href="{% url 'dashboard:reports' %}">Tout voir</a>
+    </div>
+    {% for report in reports %}
+      <article class="admin-row">
+        <div>
+          <strong>{{ report.get_reason_display }}</strong>
+          <p>{{ report.listing.title|default:"Profil" }} · {{ report.reporter.display_name }}</p>
+        </div>
+        <a class="btn btn-outline-navy btn-sm" href="{% url 'dashboard:reports' %}">Traiter</a>
+      </article>
+    {% empty %}
+      <p class="admin-empty">Aucun signalement ouvert.</p>
+    {% endfor %}
+  </section>
+</div>
+
+<div class="admin-split">
+  <section class="admin-panel admin-reveal" style="--d:.18s">
+    <div class="admin-panel-head">
+      <h2>Nouveaux profils</h2>
+      <a href="{% url 'dashboard:profiles' %}">Annuaire</a>
+    </div>
+    {% for item in recent_users %}
+      <a class="admin-row" href="{% url 'dashboard:profile_detail' item.pk %}">
+        <div>
+          <strong>{{ item.display_name }}</strong>
+          <p>{{ item.phone_number }} · {{ item.profile.city.name|default:"Ville inconnue" }}</p>
+        </div>
+        <i class="bi bi-chevron-right"></i>
+      </a>
+    {% endfor %}
+  </section>
+  <section class="admin-panel admin-reveal" style="--d:.22s">
+    <div class="admin-panel-head">
+      <h2>Dernières annonces</h2>
+      <a href="{% url 'dashboard:listings' %}">Toutes</a>
+    </div>
+    {% for listing in recent_listings %}
+      <a class="admin-row" href="{% url 'dashboard:listings' %}?q={{ listing.author.phone_number }}">
+        <div>
+          <strong>{{ listing.title }}</strong>
+          <p>{{ listing.get_status_display }} · {{ listing.author.display_name }}</p>
+        </div>
+        <i class="bi bi-chevron-right"></i>
+      </a>
+    {% endfor %}
+  </section>
+</div>
+
+<div class="admin-split">
+  <section class="admin-panel admin-reveal" style="--d:.26s">
+    <div class="admin-panel-head">
+      <h2>Recommandations en cours</h2>
+      <a href="{% url 'dashboard:recommendations' %}">Tout voir</a>
+    </div>
+    {% load fallaman_tags %}
+    {% for item in active_recos %}
+      <article class="admin-row">
+        <div>
+          <strong>{{ item.get_kind_display }}</strong>
+          <p>
+            {{ item.user.display_name }}
+            {% if item.listing %} · {{ item.listing.title }}{% endif %}
+            {% if item.profile %} · {{ item.profile.display_name }}{% endif %}
+            · {{ item.duration_days }} j
+          </p>
+        </div>
+        <strong>{{ item.amount|fcfa }}</strong>
+      </article>
+    {% empty %}
+      <p class="admin-empty">Aucune recommandation active.</p>
+    {% endfor %}
+  </section>
+  <section class="admin-panel admin-reveal" style="--d:.3s">
+    <div class="admin-panel-head">
+      <h2>Alertes équipe</h2>
+      <a href="{% url 'dashboard:alerts' %}">Toutes</a>
+    </div>
+    {% for alert in staff_alerts %}
+      <a class="admin-row" href="{% if alert.url %}{{ alert.url }}{% else %}{% url 'dashboard:alerts' %}{% endif %}">
+        <div>
+          <strong>{{ alert.title }}</strong>
+          <p>{{ alert.get_kind_display }} · {{ alert.created_at|timesince }}</p>
+        </div>
+        <i class="bi bi-chevron-right"></i>
+      </a>
+    {% empty %}
+      <p class="admin-empty">Pas encore d'alerte.</p>
+    {% endfor %}
+    <p class="mt-3 mb-0">
+      <a class="btn btn-outline-navy w-100" href="{% url 'dashboard:staff_messaging' %}?tab=diffusions">Écrire à tout le monde</a>
+    </p>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Publier — Fallaman{% endblock %}
+{% block content %}
+<section class="container-narrow py-4 page-enter">
+  <div class="page-shell">
+    <p class="step-pill">Publier une annonce</p>
+    <h1>Que recherchez-vous ?</h1>
+    <p class="lead">Les particuliers comme les entreprises peuvent publier.</p>
+    <form method="post" action="{% url 'listings:publish_type' %}" class="intent-grid intent-grid-2 mt-3">
+      {% csrf_token %}
+      <button class="intent-card" name="listing_type" value="employment" type="submit">
+        <span class="intent-icon"><i class="bi bi-briefcase"></i></span>
+        <strong>Un emploi régulier</strong>
+        <span>Quelqu'un pour travailler régulièrement.</span>
+      </button>
+      <button class="intent-card" name="listing_type" value="mission" type="submit">
+        <span class="intent-icon"><i class="bi bi-lightning-charge"></i></span>
+        <strong>Une mission</strong>
+        <span>Quelqu'un pour un travail ponctuel.</span>
+      </button>
+    </form>
+  </div>
+</section>
+{% endblock %}

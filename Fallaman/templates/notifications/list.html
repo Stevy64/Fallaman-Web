@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Notifications — Fallaman{% endblock %}
+{% block body_class %}page-notifications{% endblock %}
+{% block content %}
+<section class="container-narrow py-4 page-enter">
+  <div class="page-shell mb-3">
+    <div class="d-flex justify-content-between align-items-center gap-2">
+      <h1 class="mb-0">Notifications</h1>
+      {% if notifications %}
+        <form method="post" action="{% url 'notifications:read' %}">{% csrf_token %}<button class="btn btn-outline-navy btn-sm" type="submit">Tout lire</button></form>
+      {% endif %}
+    </div>
+    <p class="meta mb-0 mt-2">Glissez ou corbeille pour supprimer · Les messages de l'équipe restent jusqu'à suppression</p>
+  </div>
+  <div class="listing-stack mt-3" id="notification-list">
+    {% for item in notifications %}
+      <div class="notification-row" data-notification-id="{{ item.pk }}">
+        <div class="notification-swipe-bg" aria-hidden="true">
+          <span><i class="bi bi-trash"></i> Supprimer</span>
+        </div>
+        <div class="notification-surface">
+          <a
+            class="listing-card notification-card {% if not item.is_read %}is-unread{% endif %} {% if item.kind == 'staff_broadcast' %}is-broadcast{% endif %}"
+            href="{% url 'notifications:open' item.pk %}"
+            data-delete-url="{% url 'notifications:delete' item.pk %}"
+            {% if item.kind == "staff_broadcast" %}
+              data-broadcast="1"
+              data-open-url="{% url 'notifications:open' item.pk %}"
+            {% endif %}
+          >
+            {% if item.kind == "staff_broadcast" %}
+              <span class="notification-broadcast-badge"><i class="bi bi-megaphone-fill"></i> Message de l'équipe</span>
+            {% endif %}
+            <strong>{{ item.title }}</strong>
+            {% if item.kind == "staff_broadcast" and item.body %}
+              <p class="notification-preview mb-0">{{ item.body|truncatechars:100 }}</p>
+            {% endif %}
+            <p class="meta mb-0">
+              {% if item.kind == "new_matching_listing" %}Recommandation ·
+              {% elif item.kind == "staff_broadcast" %}Fallaman ·
+              {% endif %}{{ item.created_at|date:"d/m/Y H:i" }}
+            </p>
+          </a>
+          <button
+            type="button"
+            class="notification-delete-btn"
+            aria-label="Supprimer la notification"
+            data-delete-url="{% url 'notifications:delete' item.pk %}"
+          >
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+    {% empty %}
+      <div class="empty-state"><p>Pas de notification pour le moment.</p></div>
+    {% endfor %}
+  </div>
+</section>
+
+<div
+  class="bottom-sheet broadcast-sheet"
+  id="broadcast-sheet"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="broadcast-sheet-title"
+  aria-hidden="true"
+>
+  <div class="sheet-handle"></div>
+  <span class="notification-broadcast-badge broadcast-sheet-badge">
+    <i class="bi bi-megaphone-fill"></i> Message de l'équipe
+  </span>
+  <h2 class="sheet-title" id="broadcast-sheet-title">Message</h2>
+  <p class="meta broadcast-sheet-meta" id="broadcast-sheet-meta"></p>
+  <div class="broadcast-sheet-body" id="broadcast-sheet-body"></div>
+  <div class="broadcast-sheet-actions">
+    <button type="button" class="btn btn-navy w-100" data-sheet-close>Fermer</button>
+  </div>
+</div>
+{% endblock %}

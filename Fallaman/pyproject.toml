@@ -1,0 +1,27 @@
+[project]
+name = "fallaman"
+version = "0.1.0"
+description = "Fallaman — Trouvez quelqu'un. Trouvez du travail."
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.development"
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-q --reuse-db"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+exclude = [".venv", "migrations", "staticfiles"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B"]
+ignore = ["E501"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings.development"

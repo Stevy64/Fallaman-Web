@@ -1,0 +1,28 @@
+{% if professions %}
+<datalist id="profession-suggestions">
+  {% for item in professions %}
+    <option value="{{ item.name }}"></option>
+  {% endfor %}
+</datalist>
+{% endif %}
+{% if provinces %}
+<datalist id="province-suggestions">
+  {% for item in provinces %}
+    <option value="{{ item.name }}"></option>
+  {% endfor %}
+</datalist>
+{% endif %}
+{% if cities %}
+<datalist id="city-suggestions">
+  {% for item in cities %}
+    <option value="{{ item.name }}"></option>
+  {% endfor %}
+</datalist>
+{% endif %}
+{% if districts %}
+<datalist id="district-suggestions">
+  {% for item in districts %}
+    <option value="{{ item.name }}"></option>
+  {% endfor %}
+</datalist>
+{% endif %}

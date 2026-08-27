@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load fallaman_tags %}
+{% block title %}Mes recommandations — Fallaman{% endblock %}
+{% block content %}
+<section class="container-narrow py-4 page-enter">
+  <div class="page-shell">
+    <h1 class="h4 mb-3">Mes recommandations</h1>
+    <div class="listing-stack">
+      {% for item in purchases %}
+        <article class="reco-history-card">
+          <div class="d-flex justify-content-between gap-2">
+            <strong>
+              {% if item.kind == "listing" %}Boost annonce{% else %}Profil recommandé{% endif %}
+            </strong>
+            <span class="tag {% if item.status == 'active' %}is-boost{% endif %}">{{ item.get_status_display }}</span>
+          </div>
+          <p class="meta mb-1">
+            {% if item.listing %}{{ item.listing.title }}{% elif item.profile %}{{ item.profile.display_name }}{% endif %}
+          </p>
+          <p class="meta mb-0">
+            {{ item.duration_days }} j · {{ item.amount|fcfa }}
+            {% if item.ends_at %} · jusqu'au {{ item.ends_at|date:"d/m/Y H:i" }}{% endif %}
+          </p>
+        </article>
+      {% empty %}
+        <div class="empty-state">
+          <p>Aucune recommandation pour le moment.</p>
+          <a class="btn btn-accent" href="{% url 'recommendations:boost_profile' %}">Être recommandé</a>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

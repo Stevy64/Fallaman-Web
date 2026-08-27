@@ -1,0 +1,64 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Signalements — Admin Fallaman{% endblock %}
+{% block admin_kicker %}Sécurité{% endblock %}
+{% block admin_title %}Signalements{% endblock %}
+{% block admin %}
+<div class="admin-filters admin-reveal" style="--d:.04s">
+  <a class="{% if status == 'open' %}is-on{% endif %}" href="?status=open">À traiter</a>
+  <a class="{% if status == 'resolved' %}is-on{% endif %}" href="?status=resolved">Traités</a>
+  <a class="{% if status == 'rejected' %}is-on{% endif %}" href="?status=rejected">Rejetés</a>
+  <a class="{% if status == 'all' %}is-on{% endif %}" href="?status=all">Tous</a>
+</div>
+
+<div class="admin-card-stack">
+  {% for report in reports %}
+    <article class="admin-card is-action admin-reveal">
+      <div class="admin-card-body">
+        <strong>{{ report.get_reason_display }}</strong>
+        {% if report.details %}<p>{{ report.details|truncatechars:100 }}</p>{% endif %}
+        <p class="admin-card-meta">
+          {% if report.listing %}
+            <a href="{{ report.listing.get_absolute_url }}">{{ report.listing.title }}</a> ·
+          {% endif %}
+          {% if report.reported_user %}
+            <a href="{% url 'dashboard:profile_detail' report.reported_user_id %}">{{ report.reported_user.display_name }}</a>
+          {% elif report.listing %}
+            <a href="{% url 'dashboard:profile_detail' report.listing.author_id %}">{{ report.listing.author.display_name }}</a>
+          {% endif %}
+        </p>
+        <p class="admin-card-meta">
+          Par <a href="{% url 'dashboard:profile_detail' report.reporter_id %}">{{ report.reporter.display_name }}</a>
+          · {{ report.created_at|date:"d/m/Y H:i" }}
+        </p>
+        {% if report.status == 'open' or report.status == 'in_review' %}
+          <span class="admin-pill is-wait">{{ report.get_status_display }}</span>
+        {% elif report.status == 'resolved' %}
+          <span class="admin-pill is-ok">{{ report.get_status_display }}</span>
+        {% else %}
+          <span class="admin-pill">{{ report.get_status_display }}</span>
+        {% endif %}
+      </div>
+      <div class="admin-card-actions">
+        {% if report.status == 'open' %}
+          <form method="post" action="{% url 'dashboard:report_action' report.pk 'review' %}">
+            {% csrf_token %}<button class="btn btn-sm btn-navy" type="submit">Prendre en charge</button>
+          </form>
+        {% endif %}
+        {% if report.status != 'resolved' %}
+          <form method="post" action="{% url 'dashboard:report_action' report.pk 'resolve' %}">
+            {% csrf_token %}<button class="btn btn-sm btn-accent" type="submit">Traiter</button>
+          </form>
+        {% endif %}
+        {% if report.status != 'rejected' %}
+          <form method="post" action="{% url 'dashboard:report_action' report.pk 'reject' %}">
+            {% csrf_token %}<button class="btn btn-sm btn-outline-navy" type="submit">Rejeter</button>
+          </form>
+        {% endif %}
+      </div>
+    </article>
+  {% empty %}
+    <div class="admin-panel"><p class="admin-empty">Aucun signalement.</p></div>
+  {% endfor %}
+</div>
+{% include "dashboard/_pager.html" with page_obj=reports %}
+{% endblock %}

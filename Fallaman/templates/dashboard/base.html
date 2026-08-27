@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block body_class %}page-admin{% endblock %}
+{% block content %}
+<div class="admin-app">
+  <aside class="admin-rail" aria-label="Navigation équipe">
+    <div class="admin-rail-top">
+      <p class="admin-rail-kicker">Espace équipe</p>
+      <a class="admin-rail-brand" href="{% url 'dashboard:home' %}">Fallaman</a>
+    </div>
+    <nav class="admin-rail-nav">
+      <a href="{% url 'dashboard:home' %}" class="{% if section == 'home' %}is-active{% endif %}">
+        <i class="bi bi-speedometer2"></i><span>Vue d'ensemble</span>
+      </a>
+      <a href="{% url 'dashboard:alerts' %}" class="{% if section == 'alerts' %}is-active{% endif %}">
+        <i class="bi bi-bell"></i><span>Alertes</span>
+      </a>
+      <a href="{% url 'dashboard:profiles' %}" class="{% if section == 'profiles' %}is-active{% endif %}">
+        <i class="bi bi-people"></i><span>Profils</span>
+      </a>
+      <a href="{% url 'dashboard:listings' %}" class="{% if section == 'listings' %}is-active{% endif %}">
+        <i class="bi bi-briefcase"></i><span>Annonces</span>
+      </a>
+      <a href="{% url 'dashboard:recommendations' %}" class="{% if section == 'recommendations' %}is-active{% endif %}">
+        <i class="bi bi-stars"></i><span>Recommandations</span>
+      </a>
+      <a href="{% url 'dashboard:staff_messaging' %}" class="{% if section == 'messaging' %}is-active{% endif %}">
+        <i class="bi bi-chat-dots"></i><span>Messagerie</span>
+      </a>
+      <a href="{% url 'dashboard:reports' %}" class="{% if section == 'reports' %}is-active{% endif %}">
+        <i class="bi bi-flag"></i><span>Signalements</span>
+      </a>
+      <a href="{% url 'dashboard:activity_logs' %}" class="{% if section == 'logs' %}is-active{% endif %}">
+        <i class="bi bi-journal-text"></i><span>Journal</span>
+      </a>
+    </nav>
+    <div class="admin-rail-foot">
+      <a class="admin-rail-exit" href="{% url 'core:home' %}"><i class="bi bi-box-arrow-left"></i><span>Retour site</span></a>
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button class="admin-rail-exit is-button" type="submit"><i class="bi bi-power"></i><span>Déconnexion</span></button>
+      </form>
+    </div>
+  </aside>
+
+  <div class="admin-stage">
+    <header class="admin-stage-bar">
+      <p class="admin-stage-kicker">{% block admin_kicker %}Espace équipe{% endblock %}</p>
+      <h1>{% block admin_title %}Tableau de bord{% endblock %}</h1>
+    </header>
+    <div class="admin-sheet">
+      {% block admin %}{% endblock %}
+    </div>
+  </div>
+
+  <nav class="admin-tabbar" aria-label="Navigation mobile équipe">
+    <a href="{% url 'dashboard:home' %}" class="{% if section == 'home' %}is-active{% endif %}">
+      <i class="bi bi-speedometer2"></i><span>Accueil</span>
+    </a>
+    <a href="{% url 'dashboard:recommendations' %}" class="{% if section == 'recommendations' %}is-active{% endif %}">
+      <i class="bi bi-stars"></i><span>Recos</span>
+    </a>
+    <a href="{% url 'dashboard:staff_messaging' %}" class="{% if section == 'messaging' %}is-active{% endif %}">
+      <i class="bi bi-chat-dots"></i><span>Msgs</span>
+    </a>
+    <a href="{% url 'dashboard:alerts' %}" class="{% if section == 'alerts' %}is-active{% endif %}">
+      <i class="bi bi-bell"></i><span>Alertes</span>
+    </a>
+  </nav>
+</div>
+{% endblock %}

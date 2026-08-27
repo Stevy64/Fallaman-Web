@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Catégories — Fallaman{% endblock %}
+{% block content %}
+<section class="container-narrow py-4 page-enter">
+  <h1>Toutes les catégories</h1>
+  <p class="meta mb-3">Parcourez les métiers du quotidien au Gabon.</p>
+  {% for category in categories %}
+    <div class="page-shell mb-3">
+      <h2 class="h5 mb-2">{{ category.name }}</h2>
+      <div class="chip-row">
+        {% for profession in category.professions.all %}
+          <a class="chip" href="{% url 'listings:search' %}?q={{ profession.name|urlencode }}">{{ profession.name }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+</section>
+{% endblock %}

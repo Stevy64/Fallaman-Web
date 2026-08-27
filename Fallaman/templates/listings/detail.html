@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+{% load fallaman_tags %}
+{% block title %}{{ listing.title }} — Fallaman{% endblock %}
+{% block meta_description %}{{ listing.description|truncatechars:150 }}{% endblock %}
+{% block og_title %}{{ listing.title }}{% endblock %}
+{% block og_description %}{{ listing.salary_label }} · {{ listing.location_label }}{% endblock %}
+{% block body_class %}detail-body{% endblock %}
+{% block extra_head %}
+{% if listing.listing_type == 'employment' and listing.is_published %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "JobPosting",
+  "title": "{{ listing.title|escapejs }}",
+  "description": "{{ listing.description|escapejs }}",
+  "datePosted": "{{ listing.published_at|date:'c' }}",
+  "validThrough": "{{ listing.expires_at|date:'c' }}",
+  "employmentType": "FULL_TIME",
+  "jobLocation": {
+    "@type": "Place",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "{{ listing.city.name|default:'Gabon'|escapejs }}",
+      "addressCountry": "GA"
+    }
+  }
+}
+</script>
+{% endif %}
+{% endblock %}
+{% block content %}
+<div class="detail-page">
+  <div class="container-narrow">
+    <div class="detail-top">
+      <a class="icon-btn" href="{% if staff_return_url %}{{ staff_return_url }}{% else %}{% url 'listings:search' %}{% endif %}" aria-label="{% if staff_return_url %}Retour au tableau de bord{% else %}Retour{% endif %}"><i class="bi bi-arrow-left"></i></a>
+      <span class="brand-mini">
+        {{ listing.author.display_name }}
+        {% if listing.author.phone_verified %}<i class="bi bi-patch-check-fill"></i>{% endif %}
+      </span>
+      {% if user.is_authenticated %}
+        {% include "listings/partials/favorite_button.html" %}
+      {% else %}
+        <a class="icon-btn" href="{% url 'accounts:login' %}?next={{ listing.get_absolute_url }}" aria-label="Sauvegarder"><i class="bi bi-heart"></i></a>
+      {% endif %}
+    </div>
+
+    <article class="detail-sheet">
+      <div class="detail-avatar {% if listing.listing_type == 'mission' %}is-mission{% endif %}">
+        {% if listing.listing_type == 'mission' %}
+          <i class="bi bi-lightning-charge-fill"></i>
+        {% else %}
+          <i class="bi bi-briefcase-fill"></i>
+        {% endif %}
+      </div>
+      <div class="detail-header">
+        <div class="tag-row justify-content-center mb-2">
+          {% if listing.is_boosted %}
+            <span class="tag is-boost"><i class="bi bi-rocket-takeoff-fill"></i> Recommandée{% if listing.boosted_until %} · jusqu'au {{ listing.boosted_until|date:"d/m/Y" }}{% endif %}</span>
+          {% endif %}
+          <span class="tag {% if listing.listing_type == 'mission' %}is-mission{% else %}is-type{% endif %}">
+            {% if listing.listing_type == 'mission' %}Mission{% else %}Emploi{% endif %}
+          </span>
+          {% if listing.is_published %}
+            <span class="tag" style="background:var(--success-soft);color:var(--success)">Active</span>
+          {% endif %}
+        </div>
+        {% if listing.is_boosted %}
+          <p class="boost-live-banner">
+            <i class="bi bi-stars" aria-hidden="true"></i>
+            Mise en avant active{% if listing.boosted_until %} jusqu'au {{ listing.boosted_until|date:"d/m/Y H:i" }}{% endif %}
+          </p>
+        {% endif %}
+        <h1>{{ listing.title }}</h1>
+        <p class="salary">{{ listing.salary_label }}</p>
+      </div>
+
+      <div class="segmented" role="tablist">
+        <button type="button" class="is-active" data-tab="desc" role="tab" aria-selected="true">
+          <i class="bi bi-file-text"></i> Description
+        </button>
+        <button type="button" data-tab="author" role="tab" aria-selected="false">
+          <i class="bi bi-person"></i> Annonceur
+        </button>
+      </div>
+
+      <div class="detail-panel is-active" id="panel-desc" role="tabpanel">
+        <div class="facts-row">
+          <div>
+            <i class="bi bi-briefcase"></i>
+            <span>Type</span>
+            <strong>{% if listing.listing_type == 'mission' %}Mission{% else %}Emploi{% endif %}</strong>
+          </div>
+          <div>
+            <i class="bi bi-clock"></i>
+            <span>Durée</span>
+            <strong>{{ listing.get_duration_display|default:"—" }}</strong>
+          </div>
+          <div>
+            <i class="bi bi-geo-alt"></i>
+            <span>Lieu</span>
+            <strong>{{ listing.city.name|default:"Gabon" }}</strong>
+          </div>
+        </div>
+
+        <h2 class="section-title">Détails</h2>
+        <p>{{ listing.description|linebreaksbr }}</p>
+
+        {% if listing.images.all %}
+          <div class="photo-row mt-3">
+            {% for image in listing.images.all %}
+              <img src="{{ image.image.url }}" alt="Photo de l'annonce">
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="mini-cards">
+          <div class="mini-card">
+            <span><i class="bi bi-calendar3"></i> Disponibilité</span>
+            <strong>{{ listing.get_availability_display|default:"À définir" }}</strong>
+          </div>
+          <div class="mini-card">
+            <span><i class="bi bi-pin-map"></i> Quartier</span>
+            <strong>{{ listing.district.name|default:listing.location_label }}</strong>
+          </div>
+        </div>
+        <p class="safety-banner mt-3 mb-0"><i class="bi bi-shield-check"></i> Publier et postuler restent gratuits. La mise en avant est optionnelle.</p>
+
+        {% if recommended_candidates %}
+          <div class="reco-candidates mt-4">
+            <h2 class="section-title">Candidats recommandés</h2>
+            <p class="meta mb-2">Acceptez un profil pour démarrer la discussion ou WhatsApp.</p>
+            <div class="reco-candidate-stack">
+              {% for intro in recommended_candidates %}
+                {% with candidate=intro.profile %}
+                <div class="reco-candidate-card is-{{ intro.status }}">
+                  <a class="reco-candidate-main" href="{% url 'profiles:public' candidate.pk %}">
+                    {% include "components/avatar.html" with profile=candidate name=candidate.display_name size_class="avatar-lg" %}
+                    <span>
+                      <strong>{{ candidate.display_name }}</strong>
+                      <small class="meta d-block">
+                        {% if candidate.primary_profession %}{{ candidate.primary_profession.name }}{% endif %}
+                        {% if candidate.city %} · {{ candidate.city.name }}{% endif %}
+                      </small>
+                    </span>
+                  </a>
+                  {% if intro.status == "pending" %}
+                    <div class="reco-candidate-actions">
+                      <form method="post" action="{% url 'recommendations:candidate_decide' intro.pk 'accept' %}">
+                        {% csrf_token %}
+                        <button class="btn btn-accent btn-sm" type="submit">Accepter</button>
+                      </form>
+                      <form method="post" action="{% url 'recommendations:candidate_decide' intro.pk 'decline' %}">
+                        {% csrf_token %}
+                        <button class="btn btn-outline-navy btn-sm" type="submit">Refuser</button>
+                      </form>
+                    </div>
+                  {% elif intro.status == "accepted" %}
+                    <div class="reco-candidate-actions">
+                      <form method="post" action="{% url 'recommendations:candidate_contact' intro.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="channel" value="chat">
+                        <button class="btn btn-accent btn-sm" type="submit">Discuter</button>
+                      </form>
+                      {% if intro.whatsapp_url %}
+                        <form method="post" action="{% url 'recommendations:candidate_contact' intro.pk %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="channel" value="whatsapp">
+                          <button class="btn btn-navy btn-sm" type="submit"><i class="bi bi-whatsapp"></i> WhatsApp</button>
+                        </form>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                </div>
+                {% endwith %}
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="detail-panel" id="panel-author" role="tabpanel" hidden>
+        {% with profile=listing.author.profile %}
+        <section class="author-box">
+          <div class="author-box-head">
+            {% include "components/avatar.html" with profile=profile name=listing.author.display_name size_class="avatar-lg" %}
+            <div>
+              <p class="mb-1"><strong>{{ listing.author.display_name }}</strong></p>
+              {% if listing.author.phone_verified %}
+                <p class="verified mb-0"><i class="bi bi-patch-check-fill"></i> Téléphone vérifié</p>
+              {% endif %}
+              <p class="meta mb-0">Membre depuis {{ listing.author.date_joined|date:"F Y" }}</p>
+            </div>
+          </div>
+
+          {% if profile.bio %}
+            <p class="mb-0">{{ profile.bio|linebreaksbr }}</p>
+          {% endif %}
+
+          <div class="author-facts">
+            {% if profile.city or profile.district %}
+              <div class="author-fact">
+                <i class="bi bi-geo-alt-fill"></i>
+                <div>
+                  <span>Localisation</span>
+                  <strong>
+                    {% if profile.district %}{{ profile.district.name }}, {% endif %}
+                    {{ profile.city.name|default:"Gabon" }}
+                  </strong>
+                </div>
+              </div>
+            {% endif %}
+            {% if profile.primary_profession %}
+              <div class="author-fact">
+                <i class="bi bi-briefcase-fill"></i>
+                <div>
+                  <span>Métier / activité</span>
+                  <strong>{{ profile.primary_profession.name }}</strong>
+                </div>
+              </div>
+            {% endif %}
+            {% if profile.looking_for %}
+              <div class="author-fact">
+                <i class="bi bi-search"></i>
+                <div>
+                  <span>Recherche</span>
+                  <strong>{{ profile.looking_for }}</strong>
+                </div>
+              </div>
+            {% endif %}
+            {% if profile.years_of_experience %}
+              <div class="author-fact">
+                <i class="bi bi-award-fill"></i>
+                <div>
+                  <span>Expérience</span>
+                  <strong>{{ profile.years_of_experience }} an{{ profile.years_of_experience|pluralize }}</strong>
+                </div>
+              </div>
+            {% endif %}
+            {% if profile.availability %}
+              <div class="author-fact">
+                <i class="bi bi-calendar3"></i>
+                <div>
+                  <span>Disponibilité</span>
+                  <strong>{{ profile.get_availability_display }}</strong>
+                </div>
+              </div>
+            {% endif %}
+            {% if whatsapp_url %}
+              <div class="author-fact">
+                <i class="bi bi-whatsapp"></i>
+                <div>
+                  <span>WhatsApp</span>
+                  <strong>
+                    <a href="{{ whatsapp_url }}" rel="noopener" target="_blank">
+                      Contacter {{ listing.author.display_name }}
+                    </a>
+                  </strong>
+                </div>
+              </div>
+            {% elif profile.show_whatsapp and profile.whatsapp_number %}
+              <div class="author-fact">
+                <i class="bi bi-whatsapp"></i>
+                <div>
+                  <span>WhatsApp</span>
+                  <strong>{{ profile.whatsapp_number }}</strong>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+
+          {% if whatsapp_url %}
+            <a class="btn btn-navy w-100 mt-3" href="{{ whatsapp_url }}" rel="noopener" target="_blank">
+              <i class="bi bi-whatsapp"></i> Continuer sur WhatsApp
+            </a>
+          {% endif %}
+
+          {% if not profile.bio and not profile.city and not profile.primary_profession and not profile.looking_for %}
+            <p class="meta mb-0 mt-2">Cet annonceur n'a pas encore complété son profil public.</p>
+          {% endif %}
+        </section>
+        {% endwith %}
+        {% if user.is_authenticated and listing.author_id != user.id %}
+          <a class="btn btn-outline-navy w-100 mt-3" href="{% url 'moderation:report' listing.pk %}">Signaler</a>
+        {% endif %}
+      </div>
+    </article>
+  </div>
+
+  <div class="cta-bar">
+    {% if listing.author_id == user.id %}
+      <button class="cta-primary" type="button" data-sheet-open="owner-sheet">Gérer mon annonce</button>
+      <button class="btn btn-ghost" type="button" data-sheet-open="share-sheet" aria-label="Partager">
+        <i class="bi bi-share"></i>
+      </button>
+    {% elif interested %}
+      <a class="cta-primary" href="{% url 'messaging:inbox' %}">Ouvrir la discussion</a>
+      <button class="btn btn-ghost" type="button" data-sheet-open="share-sheet" aria-label="Partager">
+        <i class="bi bi-share"></i>
+      </button>
+    {% else %}
+      <a class="cta-primary" href="{% url 'interactions:express' listing.pk %}">Je suis intéressé</a>
+      <button class="btn btn-ghost" type="button" data-sheet-open="share-sheet" aria-label="Partager">
+        <i class="bi bi-share"></i>
+      </button>
+    {% endif %}
+  </div>
+</div>
+
+{% if listing.author_id == user.id %}
+<div class="bottom-sheet" id="owner-sheet" aria-hidden="true">
+  <div class="sheet-handle"></div>
+  <h2 class="sheet-title">Gérer l'annonce</h2>
+  <div class="sheet-actions">
+    <a class="sheet-option" href="{% url 'recommendations:boost_listing' listing.pk %}">
+      <i class="bi bi-rocket-takeoff-fill"></i>
+      <span>Mettre en avant<small>Recommandation payante selon la durée</small></span>
+    </a>
+    <form method="post" action="{% url 'listings:renew' listing.pk %}">
+      {% csrf_token %}
+      <button class="sheet-option" type="submit"><i class="bi bi-arrow-repeat"></i><span>Renouveler<small>Prolonge la durée de publication</small></span></button>
+    </form>
+    <form method="post" action="{% url 'listings:filled' listing.pk %}">
+      {% csrf_token %}
+      <button class="sheet-option" type="submit"><i class="bi bi-check2-circle"></i><span>Poste pourvu<small>Retirer l'annonce des recherches</small></span></button>
+    </form>
+    <a class="sheet-option" href="{% url 'listings:duplicate' listing.pk %}"><i class="bi bi-copy"></i><span>Dupliquer<small>Réutiliser pour une nouvelle recherche</small></span></a>
+  </div>
+</div>
+{% endif %}
+
+<div class="bottom-sheet" id="share-sheet" aria-hidden="true">
+  <div class="sheet-handle"></div>
+  <h2 class="sheet-title">Partager l'annonce</h2>
+  <div class="sheet-actions">
+    {% if whatsapp_url %}
+      <a class="sheet-option" href="{{ whatsapp_url }}" rel="noopener" target="_blank" data-sheet-close>
+        <i class="bi bi-whatsapp"></i>
+        <span>WhatsApp<small>Ouvre le chat avec l'annonceur</small></span>
+      </a>
+    {% endif %}
+    <button class="sheet-option" type="button" data-share data-title="{{ listing.title }}" data-text="Recherche {{ listing.job_label }} à {{ listing.location_label }}
+{{ listing.salary_label }}
+Voir l'annonce sur Fallaman">
+      <i class="bi bi-share"></i><span>Partager<small>Messages, réseaux, etc.</small></span>
+    </button>
+    <button class="sheet-option" type="button" data-copy-link>
+      <i class="bi bi-link-45deg"></i><span>Copier le lien<small>Coller où vous voulez</small></span>
+    </button>
+  </div>
+</div>
+{% endblock %}

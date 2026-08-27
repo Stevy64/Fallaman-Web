@@ -1,0 +1,158 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Messagerie — Admin Fallaman{% endblock %}
+{% block admin_kicker %}Messagerie équipe{% endblock %}
+{% block admin_title %}Messagerie{% endblock %}
+{% block admin %}
+<div class="admin-filters admin-reveal" style="--d:.04s">
+  <a class="{% if tab == 'conversations' %}is-on{% endif %}" href="{% url 'dashboard:staff_messaging' %}?tab=conversations">
+    <i class="bi bi-chat-dots"></i> Conversations
+  </a>
+  <a class="{% if tab == 'diffusions' %}is-on{% endif %}" href="{% url 'dashboard:staff_messaging' %}?tab=diffusions">
+    <i class="bi bi-megaphone"></i> Diffusions
+  </a>
+</div>
+
+{% if tab == "conversations" %}
+<form
+  class="admin-toolbar admin-reveal"
+  method="get"
+  style="--d:.06s"
+  hx-get="{% url 'dashboard:staff_messaging' %}"
+  hx-target="#admin-msg-results"
+  hx-trigger="submit, keyup changed delay:350ms from:input[name=q], change from:select[name=show]"
+  hx-push-url="true"
+  hx-indicator="#admin-msg-skeleton"
+>
+  <input type="hidden" name="tab" value="conversations">
+  <label class="visually-hidden" for="admin-msg-q">Rechercher une conversation</label>
+  <input
+    id="admin-msg-q"
+    class="form-control"
+    type="search"
+    name="q"
+    value="{{ q }}"
+    placeholder="Annonce, téléphone, nom…"
+    enterkeyhint="search"
+    autocomplete="off"
+  >
+  <label class="visually-hidden" for="admin-msg-show">Statut</label>
+  <select id="admin-msg-show" class="form-select" name="show" aria-label="Statut">
+    <option value="all" {% if show == "all" %}selected{% endif %}>Toutes</option>
+    <option value="live" {% if show == "live" %}selected{% endif %}>En cours</option>
+    <option value="expired" {% if show == "expired" %}selected{% endif %}>Expirées</option>
+  </select>
+  <button class="btn btn-navy" type="submit">Chercher</button>
+</form>
+
+<div id="admin-msg-skeleton" class="htmx-indicator skeleton-stack" aria-hidden="true">
+  {% include "components/skeleton_cards.html" %}
+</div>
+<section class="admin-panel admin-reveal" id="admin-msg-results" style="--d:.1s">
+  {% include "dashboard/partials/messaging_conversations.html" %}
+</section>
+{% else %}
+<section class="admin-panel admin-reveal" style="--d:.08s">
+  <div class="admin-panel-head"><h2>Nouveau message</h2></div>
+  <form method="post" class="stack-form" id="diffusion-form">
+    {% csrf_token %}
+    <input type="hidden" name="tab" value="diffusions">
+    <label class="form-label" for="title">Titre</label>
+    <input class="form-control" id="title" name="title" maxlength="160" required placeholder="Ex. Mise à jour Fallaman">
+    <label class="form-label mt-2" for="body">Message</label>
+    <textarea class="form-control" id="body" name="body" rows="4" maxlength="2000" required placeholder="Votre message…"></textarea>
+    <label class="form-label mt-2" for="audience">Audience</label>
+    <select class="form-select" id="audience" name="audience">
+      <option value="active">Comptes actifs (hors staff)</option>
+      <option value="all">Tous les comptes actifs</option>
+      <option value="one">Une seule personne</option>
+    </select>
+    <div class="admin-recipient" id="recipient-field" hidden>
+      <label class="form-label" for="recipient-filter">Destinataire</label>
+      <input
+        class="form-control"
+        type="search"
+        id="recipient-filter"
+        placeholder="Filtrer par nom ou téléphone…"
+        autocomplete="off"
+        enterkeyhint="search"
+      >
+      <label class="visually-hidden" for="recipient_id">Choisir le membre</label>
+      <select class="form-select admin-recipient-select" id="recipient_id" name="recipient_id" size="7">
+        <option value="">— Choisir un membre —</option>
+        {% for member in members %}
+          <option
+            value="{{ member.pk }}"
+            data-label="{{ member.display_name|lower }} {{ member.phone_number|lower }}"
+          >
+            {{ member.display_name }} · {{ member.phone_number }}
+          </option>
+        {% empty %}
+          <option value="" disabled>Aucun membre actif</option>
+        {% endfor %}
+      </select>
+      <p class="meta mb-0">Seuls les comptes actifs (hors staff) apparaissent ici.</p>
+    </div>
+    <button class="btn btn-accent w-100 mt-3" type="submit" id="diffusion-submit">Envoyer la diffusion</button>
+  </form>
+  <p class="meta mt-2">Chaque destinataire reçoit une notification dans l'app.</p>
+</section>
+
+<section class="admin-panel admin-reveal" style="--d:.12s">
+  <div class="admin-panel-head"><h2>Historique</h2></div>
+  {% for item in history %}
+    <article class="admin-row">
+      <div>
+        <strong>{{ item.title }}</strong>
+        <p>{{ item.body|truncatechars:120 }}</p>
+        <p class="meta mb-0">
+          {{ item.author.display_name }}
+          · {% if item.audience == "one" and item.recipient %}
+            → {{ item.recipient.display_name }}
+          {% else %}
+            {{ item.recipient_count }} destinataire{{ item.recipient_count|pluralize }}
+            · {{ item.get_audience_display }}
+          {% endif %}
+          · {{ item.created_at|date:"d/m/Y H:i" }}
+        </p>
+      </div>
+    </article>
+  {% empty %}
+    <p class="admin-empty">Aucune diffusion pour le moment.</p>
+  {% endfor %}
+</section>
+<script>
+(function () {
+  var audience = document.getElementById("audience");
+  var field = document.getElementById("recipient-field");
+  var select = document.getElementById("recipient_id");
+  var filter = document.getElementById("recipient-filter");
+  var submit = document.getElementById("diffusion-submit");
+  if (!audience || !field || !select) return;
+
+  function syncAudience() {
+    var one = audience.value === "one";
+    field.hidden = !one;
+    select.required = one;
+    if (submit) {
+      submit.textContent = one ? "Envoyer à cette personne" : "Envoyer la diffusion";
+    }
+    if (!one) select.value = "";
+  }
+
+  audience.addEventListener("change", syncAudience);
+  syncAudience();
+
+  if (filter) {
+    filter.addEventListener("input", function () {
+      var q = (filter.value || "").trim().toLowerCase();
+      Array.prototype.forEach.call(select.options, function (opt, i) {
+        if (i === 0) return;
+        var label = opt.getAttribute("data-label") || opt.textContent.toLowerCase();
+        opt.hidden = q && label.indexOf(q) === -1;
+      });
+    });
+  }
+})();
+</script>
+{% endif %}
+{% endblock %}

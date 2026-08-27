@@ -1,0 +1,148 @@
+# ════════════════════════════════════════════
+# FALLAMAN — Architecture conteneurs
+# Services : web, db, redis, celery, celery-beat
+# Usage prod : docker compose up -d --build
+# ════════════════════════════════════════════
+
+x-django-env: &django-env
+  DJANGO_SETTINGS_MODULE: config.settings.production
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me-in-production}
+  DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,web}
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
+  DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-false}
+  DATABASE_URL: postgres://fallaman:${POSTGRES_PASSWORD:-fallaman}@db:5432/fallaman
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  CELERY_TASK_ALWAYS_EAGER: "false"
+  OTP_PROVIDER: ${OTP_PROVIDER:-console}
+  OTP_DEV_CODE: ${OTP_DEV_CODE:-123456}
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    container_name: fallaman-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fallaman
+      POSTGRES_USER: fallaman
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fallaman}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fallaman"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fallaman-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: fallaman-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fallaman-net
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: fallaman-web
+    restart: unless-stopped
+    environment:
+      <<: *django-env
+      RUN_MIGRATIONS: "true"
+      SEED_DEMO: ${SEED_DEMO:-true}
+      COLLECTSTATIC: "true"
+    volumes:
+      - media_files:/app/media
+      - static_files:/app/staticfiles
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - fallaman-net
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: fallaman-celery
+    restart: unless-stopped
+    environment:
+      <<: *django-env
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - media_files:/app/media
+      - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+    networks:
+      - fallaman-net
+    command: celery -A config worker --loglevel=info --concurrency=2
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: fallaman-celery-beat
+    restart: unless-stopped
+    environment:
+      <<: *django-env
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+    networks:
+      - fallaman-net
+    command: celery -A config beat --loglevel=info --schedule /tmp/celerybeat-schedule
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_files:
+  static_files:
+
+networks:
+  fallaman-net:
+    driver: bridge

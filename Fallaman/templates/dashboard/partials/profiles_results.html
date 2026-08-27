@@ -1,0 +1,28 @@
+{% for item in users %}
+  <a class="admin-card admin-reveal" href="{% url 'dashboard:profile_detail' item.pk %}">
+    {% include "components/avatar.html" with profile=item.profile name=item.display_name %}
+    <div class="admin-card-body">
+      <strong>{{ item.display_name }}</strong>
+      <p>{{ item.phone_number }}{% if item.profile.city %} · {{ item.profile.city.name }}{% endif %}</p>
+      <p class="admin-card-meta">
+        {{ item.profile.primary_profession.name|default:"Sans métier" }}
+        · {{ item.listing_count }} annonce{{ item.listing_count|pluralize }}
+      </p>
+    </div>
+    <div class="admin-card-side">
+      {% if not item.is_active %}
+        <span class="admin-pill is-off">Suspendu</span>
+      {% elif item.is_staff %}
+        <span class="admin-pill is-staff">Staff</span>
+      {% elif item.phone_verified %}
+        <span class="admin-pill is-ok">Vérifié</span>
+      {% else %}
+        <span class="admin-pill">Actif</span>
+      {% endif %}
+      <i class="bi bi-chevron-right"></i>
+    </div>
+  </a>
+{% empty %}
+  <div class="admin-panel admin-reveal"><p class="admin-empty">Aucun profil trouvé.</p></div>
+{% endfor %}
+{% include "dashboard/_pager.html" with page_obj=users %}

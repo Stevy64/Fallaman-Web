@@ -1,0 +1,62 @@
+{% for listing in listings %}
+  <article class="admin-card is-action is-{{ listing.listing_type }} {% if listing.is_boosted %}is-boosted{% endif %} admin-reveal">
+    <div class="admin-card-body">
+      <strong>{{ listing.title }}</strong>
+      <p>{{ listing.get_listing_type_display }} · {{ listing.location_label }}</p>
+      <p class="admin-card-meta">
+        <a href="{% url 'dashboard:profile_detail' listing.author_id %}">{{ listing.author.display_name }}</a>
+        · {{ listing.author.phone_number }}
+      </p>
+      <div class="admin-card-pills">
+        {% if listing.is_boosted %}
+          <span class="admin-pill is-boost"><i class="bi bi-rocket-takeoff-fill"></i> Recommandée</span>
+        {% endif %}
+        {% if listing.status == 'published' %}
+          <span class="admin-pill is-ok">{{ listing.get_status_display }}</span>
+        {% elif listing.status == 'pending_moderation' %}
+          <span class="admin-pill is-wait">{{ listing.get_status_display }}</span>
+        {% elif listing.status == 'rejected' or listing.status == 'hidden' %}
+          <span class="admin-pill is-off">{{ listing.get_status_display }}</span>
+        {% else %}
+          <span class="admin-pill">{{ listing.get_status_display }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="admin-card-actions">
+      <a class="admin-action-btn is-view" href="{{ listing.get_absolute_url }}">
+        <i class="bi bi-eye"></i> Voir
+      </a>
+      {% if listing.status != 'published' %}
+        <form method="post" action="{% url 'dashboard:listing_action' listing.pk 'publish' %}">
+          {% csrf_token %}
+          <button class="admin-action-btn is-publish" type="submit">
+            <i class="bi bi-check2-circle"></i> Publier
+          </button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'dashboard:listing_action' listing.pk 'hide' %}">
+          {% csrf_token %}
+          <button class="admin-action-btn is-hide" type="submit">
+            <i class="bi bi-eye-slash"></i> Masquer
+          </button>
+        </form>
+      {% endif %}
+      <form
+        method="post"
+        action="{% url 'dashboard:listing_action' listing.pk 'reject' %}"
+        data-confirm="L'annonce sera retirée des recherches."
+        data-confirm-title="Rejeter cette annonce ?"
+        data-confirm-ok="Rejeter"
+        data-confirm-danger="1"
+      >
+        {% csrf_token %}
+        <button class="admin-action-btn is-reject" type="submit">
+          <i class="bi bi-x-circle"></i> Rejeter
+        </button>
+      </form>
+    </div>
+  </article>
+{% empty %}
+  <div class="admin-panel"><p class="admin-empty">Aucune annonce.</p></div>
+{% endfor %}
+{% include "dashboard/_pager.html" with page_obj=listings %}

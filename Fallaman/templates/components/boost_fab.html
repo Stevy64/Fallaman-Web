@@ -1,0 +1,41 @@
+{% if show_boost_fab %}
+<div class="boost-fab" id="boost-fab" data-collapsed="0" data-hidden="0">
+  <button
+    type="button"
+    class="boost-fab-peek"
+    id="boost-fab-peek"
+    aria-label="Afficher le bouton de recommandation"
+    hidden
+  >
+    <i class="bi bi-rocket-takeoff-fill" aria-hidden="true"></i>
+  </button>
+
+  <div class="boost-fab-panel" id="boost-fab-panel">
+    <button
+      type="button"
+      class="boost-fab-collapse"
+      id="boost-fab-collapse"
+      aria-label="Réduire"
+      title="Réduire"
+    >
+      <i class="bi bi-chevron-right" aria-hidden="true"></i>
+    </button>
+    <a class="boost-fab-main" href="{{ boost_fab_url }}" id="boost-fab-main">
+      <span class="boost-fab-icon" aria-hidden="true"><i class="bi bi-rocket-takeoff-fill"></i></span>
+      <span class="boost-fab-copy">
+        <small>Recommandation</small>
+        <strong>{{ boost_fab_label }}</strong>
+      </span>
+    </a>
+    <button
+      type="button"
+      class="boost-fab-hide"
+      id="boost-fab-hide"
+      aria-label="Masquer"
+      title="Masquer"
+    >
+      <i class="bi bi-x-lg" aria-hidden="true"></i>
+    </button>
+  </div>
+</div>
+{% endif %}

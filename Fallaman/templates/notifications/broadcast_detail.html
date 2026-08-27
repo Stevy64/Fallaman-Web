@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ notification.title }} — Fallaman{% endblock %}
+{% block body_class %}page-notifications{% endblock %}
+{% block content %}
+<section class="container-narrow py-4 page-enter">
+  <div class="page-shell mb-3">
+    <a href="{% url 'notifications:list' %}"><i class="bi bi-arrow-left"></i> Notifications</a>
+  </div>
+  <article class="broadcast-detail admin-reveal">
+    <span class="notification-broadcast-badge"><i class="bi bi-megaphone-fill"></i> Message de l'équipe</span>
+    <h1>{{ notification.title }}</h1>
+    <p class="meta">{{ notification.created_at|date:"d/m/Y H:i" }}</p>
+    {% if notification.body %}
+      <div class="broadcast-detail-body">{{ notification.body|linebreaksbr }}</div>
+    {% endif %}
+    <form method="post" action="{% url 'notifications:delete' notification.pk %}" class="mt-3">
+      {% csrf_token %}
+      <button class="btn btn-outline-navy w-100" type="submit">
+        <i class="bi bi-trash"></i> Supprimer ce message
+      </button>
+    </form>
+  </article>
+</section>
+{% endblock %}

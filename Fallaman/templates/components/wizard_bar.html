@@ -1,0 +1,8 @@
+{% if back_url %}
+<div class="wizard-bar">
+  <a class="wizard-back" href="{{ back_url }}"><i class="bi bi-arrow-left"></i> Retour</a>
+  {% if step %}<p class="step-pill mb-0">Étape {{ step }} sur 4</p>{% endif %}
+</div>
+{% elif step %}
+<p class="step-pill">Étape {{ step }} sur 4</p>
+{% endif %}

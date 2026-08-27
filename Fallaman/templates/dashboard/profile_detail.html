@@ -1,0 +1,166 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{{ member.display_name }} — Admin Fallaman{% endblock %}
+{% block admin_kicker %}Fiche membre{% endblock %}
+{% block admin_title %}{{ member.display_name }}{% endblock %}
+{% block admin %}
+<p class="admin-back admin-reveal"><a href="{% url 'dashboard:profiles' %}"><i class="bi bi-arrow-left"></i> Tous les profils</a></p>
+
+<section class="admin-identity admin-reveal" style="--d:.05s">
+  {% include "components/avatar.html" with profile=profile name=member.display_name size_class="avatar-xl" %}
+  <div class="admin-identity-copy">
+    <p class="admin-identity-meta">
+      {{ member.phone_number }}
+      {% if profile.city %} · {{ profile.city.name }}{% if profile.district %} · {{ profile.district.name }}{% endif %}{% endif %}
+    </p>
+    <div class="admin-pill-row">
+      {% if member.is_active %}<span class="admin-pill is-ok">Compte actif</span>{% else %}<span class="admin-pill is-off">Suspendu</span>{% endif %}
+      {% if member.phone_verified %}<span class="admin-pill is-ok">Tél. vérifié</span>{% else %}<span class="admin-pill">Tél. non vérifié</span>{% endif %}
+      {% if member.is_staff %}<span class="admin-pill is-staff">Staff</span>{% endif %}
+      {% if profile and profile.is_complete %}<span class="admin-pill">Profil complet</span>{% else %}<span class="admin-pill">Profil incomplet</span>{% endif %}
+    </div>
+  </div>
+  <div class="admin-identity-actions">
+    {% if member != user %}
+      {% if member.is_active %}
+        <form method="post" action="{% url 'dashboard:user_action' member.pk 'suspend' %}" data-confirm="Ce membre ne pourra plus se connecter ni publier." data-confirm-title="Suspendre ce compte ?" data-confirm-ok="Suspendre" data-confirm-danger="1">
+          {% csrf_token %}
+          <button class="btn btn-outline-navy" type="submit">Suspendre</button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'dashboard:user_action' member.pk 'activate' %}">
+          {% csrf_token %}
+          <button class="btn btn-accent" type="submit">Réactiver</button>
+        </form>
+      {% endif %}
+    {% endif %}
+    {% if not member.phone_verified %}
+      <form method="post" action="{% url 'dashboard:user_action' member.pk 'verify' %}">
+        {% csrf_token %}
+        <button class="btn btn-navy" type="submit">Marquer vérifié</button>
+      </form>
+    {% endif %}
+    {% if profile and profile.is_public %}
+      <a class="btn btn-outline-navy" href="{% url 'profiles:public' profile.pk %}">Voir le profil public</a>
+    {% endif %}
+  </div>
+</section>
+
+<section class="admin-kpis admin-kpis-compact" aria-label="Activité du profil">
+  <div class="admin-kpi is-listings"><span class="admin-kpi-icon"><i class="bi bi-briefcase-fill"></i></span><span>Annonces</span><strong>{{ stats.listings }}</strong><small>{{ stats.published }} en ligne</small></div>
+  <div class="admin-kpi is-profiles"><span class="admin-kpi-icon"><i class="bi bi-hand-thumbs-up-fill"></i></span><span>Intérêts reçus</span><strong>{{ stats.interests_in }}</strong><small>{{ stats.interests_out }} envoyés</small></div>
+  <div class="admin-kpi is-moderate"><span class="admin-kpi-icon"><i class="bi bi-chat-dots-fill"></i></span><span>Messages</span><strong>{{ stats.messages }}</strong><small>envoyés</small></div>
+  <div class="admin-kpi is-reports"><span class="admin-kpi-icon"><i class="bi bi-flag-fill"></i></span><span>Signalements</span><strong>{{ stats.reports }}</strong><small>reçus</small></div>
+</section>
+
+{% if profile %}
+<section class="admin-panel">
+  <div class="admin-panel-head"><h2>Identité</h2></div>
+  <dl class="admin-facts">
+    <div><dt>Nom affiché</dt><dd>{{ profile.display_name|default:"—" }}</dd></div>
+    <div><dt>Prénom / nom</dt><dd>{{ profile.first_name|default:"—" }} {{ profile.last_name }}</dd></div>
+    <div><dt>Métier</dt><dd>{{ profile.primary_profession.name|default:"—" }}</dd></div>
+    <div><dt>Je recherche</dt><dd>{{ profile.looking_for|default:"—" }}</dd></div>
+    <div><dt>Disponibilité</dt><dd>{{ profile.get_availability_display|default:"—" }}</dd></div>
+    <div><dt>WhatsApp</dt><dd>{% if profile.show_whatsapp %}{{ profile.whatsapp_number|default:member.phone_number }}{% else %}Masqué{% endif %}</dd></div>
+    <div><dt>Membre depuis</dt><dd>{{ member.date_joined|date:"d/m/Y" }}</dd></div>
+    <div><dt>Dernière connexion</dt><dd>{{ member.last_login|date:"d/m/Y H:i"|default:"Jamais" }}</dd></div>
+  </dl>
+  {% if profile.bio %}<p class="admin-bio">{{ profile.bio }}</p>{% endif %}
+</section>
+{% endif %}
+
+<div class="admin-split">
+  <section class="admin-panel">
+    <div class="admin-panel-head"><h2>Activité récente</h2></div>
+    {% for event in activity %}
+      <article class="admin-activity">
+        <i class="bi bi-{{ event.icon }}"></i>
+        <div>
+          <strong>{{ event.label }}</strong>
+          <p>{{ event.text }}{% if event.meta %} · {{ event.meta }}{% endif %}</p>
+        </div>
+        <time>{{ event.when|date:"d/m H:i" }}</time>
+      </article>
+    {% empty %}
+      <p class="admin-empty">Pas encore d'activité.</p>
+    {% endfor %}
+  </section>
+
+  <section class="admin-panel">
+    <div class="admin-panel-head"><h2>Annonces</h2></div>
+    {% for listing in listings %}
+      <article class="admin-row">
+        <div>
+          <strong>{{ listing.title }}</strong>
+          <p>{{ listing.get_status_display }} · {{ listing.location_label }}</p>
+        </div>
+        <div class="admin-row-actions">
+          <a class="btn btn-sm btn-outline-navy" href="{{ listing.get_absolute_url }}">Voir</a>
+          {% if listing.status != 'published' %}
+            <form method="post" action="{% url 'dashboard:listing_action' listing.pk 'publish' %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}">
+              <button class="btn btn-sm btn-accent" type="submit">Publier</button>
+            </form>
+          {% else %}
+            <form method="post" action="{% url 'dashboard:listing_action' listing.pk 'hide' %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}">
+              <button class="btn btn-sm btn-outline-navy" type="submit">Masquer</button>
+            </form>
+          {% endif %}
+        </div>
+      </article>
+    {% empty %}
+      <p class="admin-empty">Aucune annonce.</p>
+    {% endfor %}
+  </section>
+</div>
+
+<div class="admin-split">
+  <section class="admin-panel">
+    <div class="admin-panel-head"><h2>Intérêts reçus</h2></div>
+    {% for item in interests_in %}
+      <p class="admin-line"><strong>{{ item.user.display_name }}</strong> · {{ item.listing.title }} <span>{{ item.created_at|date:"d/m" }}</span></p>
+    {% empty %}
+      <p class="admin-empty">Aucun intérêt reçu.</p>
+    {% endfor %}
+  </section>
+  <section class="admin-panel">
+    <div class="admin-panel-head"><h2>Intérêts envoyés</h2></div>
+    {% for item in interests_out %}
+      <p class="admin-line"><strong>{{ item.listing.title }}</strong> · {{ item.listing.city.name|default:"Gabon" }} <span>{{ item.created_at|date:"d/m" }}</span></p>
+    {% empty %}
+      <p class="admin-empty">Aucun intérêt envoyé.</p>
+    {% endfor %}
+  </section>
+</div>
+
+<div class="admin-split">
+  <section class="admin-panel">
+    <div class="admin-panel-head"><h2>Discussions</h2></div>
+    {% for convo in conversations %}
+      <a class="admin-line" href="{% url 'dashboard:conversation_detail' convo.pk %}">
+        <strong>{{ convo.counterpart.display_name }}</strong> · {{ convo.listing.title }}
+        <span>{% if convo.is_expired %}expirée{% else %}{{ convo.last_message_at|date:"d/m H:i" }}{% endif %}</span>
+      </a>
+    {% empty %}
+      <p class="admin-empty">Pas de discussion.</p>
+    {% endfor %}
+  </section>
+  <section class="admin-panel">
+    <div class="admin-panel-head"><h2>Signalements & blocages</h2></div>
+    {% for report in reports_in %}
+      <p class="admin-line"><strong>{{ report.get_reason_display }}</strong> · {{ report.get_status_display }} <span>{{ report.created_at|date:"d/m" }}</span></p>
+    {% empty %}
+      <p class="admin-empty">Aucun signalement reçu.</p>
+    {% endfor %}
+    {% if blocks_made %}
+      <p class="admin-sub">A bloqué : {% for b in blocks_made %}{{ b.blocked.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+    {% endif %}
+    {% if blocks_got %}
+      <p class="admin-sub">Bloqué par : {% for b in blocks_got %}{{ b.blocker.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
