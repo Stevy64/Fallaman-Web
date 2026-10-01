@@ -3,7 +3,7 @@ from .base import env
 
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
-# Code OTP fixe, paiement simulé, compte équipe de démonstration.
+# Code OTP fixe et compte équipe de démonstration.
 DEV_CONVENIENCES = env.bool("DEV_CONVENIENCES", default=True)
 # Console par défaut, mais surchargeable : c'est ce qui permet de tester le
 # vrai chemin SMTP en local (Mailpit, ou un relais réel).

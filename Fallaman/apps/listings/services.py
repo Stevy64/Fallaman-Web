@@ -67,6 +67,24 @@ def search_listings(queryset, query: str):
     return queryset.filter(filters)
 
 
+#: Paramètres lus par apply_filters(). Sert aussi aux gabarits, pour rejouer
+#: l'état courant d'un formulaire à l'autre. À tenir synchronisé avec le corps
+#: de la fonction ci-dessous.
+FILTER_PARAMS = (
+    "q",
+    "type",
+    "city",
+    "city_name",
+    "province",
+    "duration",
+    "availability",
+    "profession",
+    "category",
+    "salary_min",
+    "sort",
+)
+
+
 def apply_filters(queryset, params):
     listing_type = params.get("type")
     if listing_type in {Listing.Type.EMPLOYMENT, Listing.Type.MISSION}:

@@ -2,9 +2,9 @@
 <article class="listing-card {% if listing.is_boosted %}is-boosted{% endif %}">
   <a class="listing-card-hit" href="{{ listing.get_absolute_url }}" aria-label="Voir {{ listing.title }}"></a>
   {% if listing.is_boosted %}
-    <div class="listing-boost-ribbon" aria-label="Annonce recommandée">
+    <div class="listing-boost-ribbon" aria-label="Annonce boostée">
       <i class="bi bi-rocket-takeoff-fill" aria-hidden="true"></i>
-      Recommandée
+      Boostée
       {% if listing.boosted_until %}
         <span>· jusqu'au {{ listing.boosted_until|date:"d/m" }}</span>
       {% endif %}
@@ -47,7 +47,7 @@
     <p class="salary">{{ listing.salary_label }}</p>
     <div class="tag-row">
       {% if listing.is_boosted %}
-        <span class="tag is-boost"><i class="bi bi-stars"></i> Recommandée</span>
+        <span class="tag is-boost"><i class="bi bi-rocket-takeoff-fill"></i> Boostée</span>
       {% endif %}
       <span class="tag {% if listing.listing_type == 'mission' %}is-mission{% else %}is-type{% endif %}">
         {% if listing.listing_type == 'mission' %}Mission{% else %}Emploi{% endif %}

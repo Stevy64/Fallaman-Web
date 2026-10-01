@@ -1,5 +1,9 @@
 # Déploiement Fallaman sur PythonAnywhere
 
+> **Cible officielle de production : OVH Cloud** —
+> voir [DEPLOIEMENT_OVH.md](DEPLOIEMENT_OVH.md) (`fallaman.gabomazone.com`).
+> Ce document reste utile pour un staging léger ou un historique de migration.
+
 > À lire en entier avant le premier déploiement. Les sections **Prérequis** et
 > **Paiement SingPay** décrivent deux contraintes de la plateforme qui peuvent
 > bloquer la mise en production.
@@ -78,7 +82,7 @@ n'est pas respecté — c'est volontaire, chacun est directement exploitable :
 | `DJANGO_ALLOWED_HOSTS` sans `*` | Empoisonnement d'en-tête `Host` |
 | `OTP_PROVIDER` ≠ `console` | Sinon le code est figé : n'importe qui entre sur n'importe quel compte |
 | Identifiants WhatsApp présents si `OTP_PROVIDER=whatsapp` | Sinon personne ne reçoit son code : site en ligne mais inaccessible |
-| `SINGPAY_MOCK` = `false` | Sinon les recommandations sont créditées sans encaissement |
+| Identifiants SingPay présents | Sinon le paiement (et le démarrage) est bloqué |
 | `DEMO_STAFF_PASSWORD` vide | Ce compte est administrateur, et son mot de passe est dans le dépôt |
 
 ### Envoi du code de connexion

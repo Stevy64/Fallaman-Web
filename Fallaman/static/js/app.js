@@ -99,6 +99,7 @@ function showAppLoader() {
       appLoader.hidden = false;
       appLoader.setAttribute("aria-hidden", "false");
       document.body.classList.add("is-loading");
+      appLoader.classList.add("is-open");
     }
   }, 140);
 }
@@ -111,6 +112,7 @@ function hideAppLoader(force = false) {
     appLoaderTimer = null;
   }
   if (appLoader) {
+    appLoader.classList.remove("is-open");
     appLoader.hidden = true;
     appLoader.setAttribute("aria-hidden", "true");
   }
@@ -644,6 +646,17 @@ window.addEventListener(
 
 document.body.classList.add("page-ready");
 
+(function initMotion() {
+  document.addEventListener("htmx:afterSwap", (event) => {
+    const root = event.target;
+    if (!(root instanceof Element)) return;
+    root.querySelectorAll(".listing-card, .admin-card, .reveal").forEach((el, index) => {
+      el.classList.add("htmx-added");
+      el.style.setProperty("--d", `${Math.min(index, 8) * 0.04}s`);
+    });
+  });
+})();
+
 (function initBoostFab() {
   const root = document.getElementById("boost-fab");
   if (!root) return;
@@ -706,4 +719,197 @@ document.body.classList.add("page-ready");
   });
 
   apply();
+})();
+
+(function initPwaInstall() {
+  const STORAGE_KEY = "fallaman_pwa_install";
+  const SESSION_KEY = "fallaman_pwa_popup_shown";
+  const DISMISS_MS = 14 * 24 * 60 * 60 * 1000;
+  const modal = document.getElementById("pwa-install-modal");
+  const soonModal = document.getElementById("app-store-soon-modal");
+  const soonText = document.getElementById("app-store-soon-text");
+  const soonPwaBtn = document.getElementById("app-store-soon-pwa");
+  const iosSteps = document.getElementById("pwa-ios-steps");
+  const howtoSteps = document.getElementById("pwa-howto-steps");
+  let deferredPrompt = null;
+
+  function isStandalone() {
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true
+    );
+  }
+
+  function isIos() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  }
+
+  function readState() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function writeState(next) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  }
+
+  function shouldOffer() {
+    if (isStandalone()) return false;
+    const state = readState();
+    if (state.installed) return false;
+    if (state.dismissedAt && Date.now() - state.dismissedAt < DISMISS_MS) return false;
+    return true;
+  }
+
+  function openModal(el, focusSel) {
+    if (!el) return;
+    el.hidden = false;
+    requestAnimationFrame(() => {
+      el.classList.add("is-open");
+      document.body.classList.add("pwa-modal-open");
+      const focusEl = focusSel ? el.querySelector(focusSel) : null;
+      if (focusEl) focusEl.focus();
+    });
+  }
+
+  function closeModal(el) {
+    if (!el) return;
+    el.classList.remove("is-open");
+    el.hidden = true;
+    const otherOpen =
+      (modal && modal !== el && modal.classList.contains("is-open")) ||
+      (soonModal && soonModal !== el && soonModal.classList.contains("is-open"));
+    if (!otherOpen) document.body.classList.remove("pwa-modal-open");
+  }
+
+  function showPopup() {
+    if (!modal || !shouldOffer()) return;
+    openModal(modal, "[data-pwa-install]");
+    try {
+      sessionStorage.setItem(SESSION_KEY, "1");
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function hidePopup() {
+    closeModal(modal);
+  }
+
+  function hideSoonPopup() {
+    closeModal(soonModal);
+  }
+
+  function showStoreSoon(platform) {
+    if (!soonModal) return;
+    hidePopup();
+    const label = platform === "ios" ? "iOS (App Store)" : "Android (Play Store)";
+    if (soonText) {
+      if (isStandalone()) {
+        soonText.textContent =
+          `L'application ${label} arrive bientôt. Vous utilisez déjà Fallaman installé sur cet appareil.`;
+      } else {
+        soonText.textContent =
+          `L'application ${label} arrive bientôt. En attendant, installez Fallaman sur votre écran d'accueil.`;
+      }
+    }
+    if (soonPwaBtn) {
+      soonPwaBtn.hidden = isStandalone();
+    }
+    openModal(soonModal, isStandalone() ? "[data-app-store-soon-dismiss]" : "[data-app-store-soon-pwa]");
+  }
+
+  function openHowto() {
+    if (iosSteps) iosSteps.hidden = !isIos();
+    if (howtoSteps) howtoSteps.hidden = isIos();
+    hidePopup();
+    hideSoonPopup();
+    if (window.FallamanUI) FallamanUI.openSheet("pwa-install-sheet");
+  }
+
+  async function promptInstall() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      if (choice && choice.outcome === "accepted") {
+        writeState({ installed: true });
+        hidePopup();
+        hideSoonPopup();
+        return;
+      }
+    }
+    openHowto();
+  }
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    document.body.classList.add("pwa-installable");
+  });
+
+  window.addEventListener("appinstalled", () => {
+    writeState({ installed: true });
+    hidePopup();
+    hideSoonPopup();
+  });
+
+  document.addEventListener("click", (event) => {
+    const storePending = event.target.closest("[data-app-store-pending]");
+    if (storePending) {
+      event.preventDefault();
+      showStoreSoon(storePending.getAttribute("data-app-store-pending") || "android");
+      return;
+    }
+    if (event.target.closest("[data-app-store-soon-dismiss]")) {
+      event.preventDefault();
+      hideSoonPopup();
+      return;
+    }
+    if (event.target.closest("[data-app-store-soon-pwa]")) {
+      event.preventDefault();
+      hideSoonPopup();
+      promptInstall();
+      return;
+    }
+    if (event.target.closest("[data-pwa-dismiss]")) {
+      event.preventDefault();
+      writeState({ dismissedAt: Date.now() });
+      hidePopup();
+      return;
+    }
+    if (event.target.closest("[data-pwa-install]")) {
+      event.preventDefault();
+      promptInstall();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (soonModal && soonModal.classList.contains("is-open")) {
+      hideSoonPopup();
+      return;
+    }
+    if (modal && modal.classList.contains("is-open")) {
+      writeState({ dismissedAt: Date.now() });
+      hidePopup();
+    }
+  });
+
+  if (isStandalone()) {
+    document.body.classList.add("pwa-standalone");
+    return;
+  }
+  let alreadyShown = false;
+  try {
+    alreadyShown = sessionStorage.getItem(SESSION_KEY) === "1";
+  } catch (_) {
+    alreadyShown = false;
+  }
+  if (shouldOffer() && !alreadyShown) {
+    window.setTimeout(showPopup, 500);
+  }
 })();

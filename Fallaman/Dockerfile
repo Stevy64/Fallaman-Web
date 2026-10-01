@@ -1,4 +1,6 @@
-# ── Stage 1 : builder
+# ── Fallaman — image multi-stage (builder → runner)
+# Cible production OVH : docker compose up -d --build
+# Healthcheck : GET /health/
 FROM python:3.13-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

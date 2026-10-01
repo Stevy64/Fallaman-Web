@@ -1,0 +1,73 @@
+<div
+  class="pwa-install-modal"
+  id="pwa-install-modal"
+  hidden
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="pwa-install-title"
+  aria-describedby="pwa-install-text"
+>
+  <button type="button" class="pwa-install-scrim" data-pwa-dismiss aria-label="Fermer"></button>
+  <div class="pwa-install-dialog">
+    <div class="pwa-install-icon" aria-hidden="true">
+      <i class="bi bi-phone"></i>
+    </div>
+    <strong id="pwa-install-title">Installer Fallaman</strong>
+    <p id="pwa-install-text">
+      Ajoutez l'application à votre écran d'accueil pour un accès plus rapide, même hors ligne.
+    </p>
+    <button type="button" class="btn btn-accent w-100" data-pwa-install>Installer l'application</button>
+    <button type="button" class="pwa-install-later" data-pwa-dismiss>Plus tard</button>
+  </div>
+</div>
+
+<div
+  class="pwa-install-modal"
+  id="app-store-soon-modal"
+  hidden
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="app-store-soon-title"
+  aria-describedby="app-store-soon-text"
+>
+  <button type="button" class="pwa-install-scrim" data-app-store-soon-dismiss aria-label="Fermer"></button>
+  <div class="pwa-install-dialog">
+    <div class="pwa-install-icon is-soon" aria-hidden="true">
+      <i class="bi bi-hourglass-split"></i>
+    </div>
+    <strong id="app-store-soon-title">Bientôt disponible</strong>
+    <p id="app-store-soon-text">
+      L'application mobile arrive bientôt sur les stores.
+      En attendant, installez Fallaman sur votre écran d'accueil.
+    </p>
+    <button type="button" class="btn btn-accent w-100" data-app-store-soon-pwa id="app-store-soon-pwa">
+      Installer l'application (PWA)
+    </button>
+    <button type="button" class="pwa-install-later" data-app-store-soon-dismiss>Fermer</button>
+  </div>
+</div>
+
+<div
+  class="bottom-sheet"
+  id="pwa-install-sheet"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="pwa-install-sheet-title"
+  aria-hidden="true"
+>
+  <div class="sheet-handle"></div>
+  <h2 class="sheet-title" id="pwa-install-sheet-title">Installer l'application</h2>
+  <ol class="pwa-install-steps" id="pwa-ios-steps" hidden>
+    <li>Appuyez sur <strong>Partager</strong> <i class="bi bi-box-arrow-up" aria-hidden="true"></i> dans Safari.</li>
+    <li>Choisissez <strong>Sur l'écran d'accueil</strong>.</li>
+    <li>Validez avec <strong>Ajouter</strong>.</li>
+  </ol>
+  <ol class="pwa-install-steps" id="pwa-howto-steps" hidden>
+    <li>Cliquez sur <strong>…</strong> en haut à droite d'Edge ou Chrome.</li>
+    <li>Ouvrez <strong>Applications</strong>, puis <strong>Installer Fallaman</strong>.</li>
+    <li>Vous pouvez aussi utiliser l'icône d'installation dans la barre d'adresse.</li>
+  </ol>
+  <div class="confirm-sheet-actions">
+    <button type="button" class="btn btn-outline-navy w-100" data-sheet-close>Compris</button>
+  </div>
+</div>

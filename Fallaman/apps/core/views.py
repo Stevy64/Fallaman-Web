@@ -46,6 +46,18 @@ def offline(request):
 
 
 @require_GET
+def service_worker(request):
+    response = render(
+        request,
+        "pwa/sw.js",
+        content_type="application/javascript; charset=utf-8",
+    )
+    response["Service-Worker-Allowed"] = "/"
+    response["Cache-Control"] = "no-cache"
+    return response
+
+
+@require_GET
 def page_about(request):
     return render(request, "pages/about.html")
 

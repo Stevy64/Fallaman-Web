@@ -1,18 +1,50 @@
 {% extends "base.html" %}
+{% load fallaman_tags %}
 {% block title %}{{ category.name }} — Fallaman{% endblock %}
+{% block body_class %}page-categories{% endblock %}
 {% block content %}
 <section class="container-narrow py-4 page-enter">
-  <h1>{{ category.name }}</h1>
-  <div class="chip-row mb-3">
-    {% for profession in category.professions.all %}
-      <a class="chip" href="{% url 'listings:search' %}?q={{ profession.name|urlencode }}">{{ profession.name }}</a>
-    {% endfor %}
+  <header class="categories-hero reveal">
+    <a class="categories-back" href="{% url 'taxonomy:list' %}">
+      <i class="bi bi-arrow-left" aria-hidden="true"></i> Catégories
+    </a>
+    <div class="category-detail-title">
+      <span class="category-panel-icon is-lg" aria-hidden="true">
+        <i class="bi {{ category.icon|category_icon }}"></i>
+      </span>
+      <div>
+        <h1>{{ category.name }}</h1>
+        <p class="meta mb-0">
+          {{ category.profession_count }} métier{{ category.profession_count|pluralize }}
+          {% if listing_count %} · {{ listing_count }} annonce{{ listing_count|pluralize }}{% endif %}
+        </p>
+      </div>
+    </div>
+  </header>
+
+  {% if professions %}
+    <div class="category-panel-chips reveal mb-3">
+      {% for profession in professions %}
+        <a class="chip" href="{% url 'listings:search' %}?q={{ profession.name|urlencode }}">
+          {{ profession.name }}
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="section-head reveal">
+    <h2 class="section-title mb-0">Annonces</h2>
+    <a href="{% url 'listings:search' %}">Tout voir <i class="bi bi-chevron-right"></i></a>
   </div>
-  <div class="listing-stack">
+
+  <div class="listing-stack mt-3">
     {% for listing in listings %}
       {% include "components/listing_card.html" %}
     {% empty %}
-      <div class="empty-state"><p>Pas encore d'annonce dans cette catégorie.</p></div>
+      <div class="empty-state reveal">
+        <p>Pas encore d'annonce dans cette catégorie.</p>
+        <a class="btn btn-accent" href="{% url 'listings:publish' %}">Publier une annonce</a>
+      </div>
     {% endfor %}
   </div>
 </section>

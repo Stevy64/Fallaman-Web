@@ -1,3 +1,15 @@
+"""Signalements et blocages entre membres.
+
+``BlockedUser`` est dirigé en base (qui bloque qui), mais **symétrique à
+l'usage** : ``BlockedUser.objects.is_blocked(a, b)`` est vrai quel que soit le
+sens. Un blocage empêche les messages dans les deux directions, y compris à
+l'initiative de la personne bloquée.
+
+``Report`` alimente la file de modération du tableau de bord. Le motif est
+contraint côté vue à la liste ``Reason`` : Django ne valide pas ``choices`` à
+l'enregistrement, une valeur libre y entrerait sinon.
+"""
+
 from django.conf import settings
 from django.db import models
 

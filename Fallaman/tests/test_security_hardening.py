@@ -138,7 +138,26 @@ def test_otp_console_fonctionne_en_developpement():
     assert request_activation_code("+24106200089", "b@exemple.com") == "123456"
 
 
-# ── Compte de démonstration ─────────────────────────────────────────────
+# ── Connexion équipe ────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+@override_settings(DEV_CONVENIENCES=False)
+def test_acces_equipe_masque_hors_developpement(client):
+    login_page = client.get(reverse("accounts:login"))
+    assert login_page.status_code == 200
+    assert "Accès équipe".encode() not in login_page.content
+    assert client.get(reverse("accounts:staff_login")).status_code == 404
+    assert client.post(reverse("accounts:staff_demo_login")).status_code == 404
+
+
+@pytest.mark.django_db
+@override_settings(DEV_CONVENIENCES=True)
+def test_acces_equipe_propose_en_developpement(client):
+    login_page = client.get(reverse("accounts:login"))
+    assert login_page.status_code == 200
+    assert "Accès équipe".encode() in login_page.content
+    assert client.get(reverse("accounts:staff_login")).status_code == 200
 
 
 @pytest.mark.django_db

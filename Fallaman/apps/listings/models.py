@@ -1,3 +1,23 @@
+"""Annonces : le cœur du domaine Fallaman.
+
+Une annonce est publiée par un *pourvoyeur* (particulier ou petite entreprise)
+qui cherche quelqu'un. Deux natures, qui ne vivent pas aussi longtemps :
+
+* ``EMPLOYMENT`` — un poste durable, valable ``LISTING_EMPLOYMENT_TTL_DAYS``
+  jours (30 par défaut) ;
+* ``MISSION`` — un besoin ponctuel, valable ``LISTING_MISSION_TTL_DAYS`` jours
+  (7 par défaut).
+
+Le cycle de vie passe par ``status`` : brouillon → en modération (si le texte
+paraît suspect) → publiée → expirée / pourvue / retirée. Une annonce n'est
+réellement visible que si ``status == PUBLISHED`` **et** ``expires_at`` est dans
+le futur : c'est ce que garantit ``ListingQuerySet.published()``, à préférer
+partout à un filtre écrit à la main.
+
+``boosted_until`` et ``boost_score`` portent la mise en avant payante ; ils sont
+alimentés par apps.recommendations, jamais directement ici.
+"""
+
 from datetime import timedelta
 
 from django.conf import settings

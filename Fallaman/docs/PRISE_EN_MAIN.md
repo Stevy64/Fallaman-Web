@@ -9,7 +9,7 @@ Guide pas à pas pour lancer et utiliser **la web app** (développement et produ
 1. [Vue d’ensemble](#1-vue-densemble)
 2. [Web app — développement local](#2-web-app--développement-local)
 3. [Web app — Docker (dev)](#3-web-app--docker-dev)
-4. [Web app — production](#4-web-app--production)
+4. [Web app — production (OVH)](#4-web-app--production-ovh)
 5. [Comptes, OTP et espaces staff](#5-comptes-otp-et-espaces-staff)
 6. [Application mobile Flutter](#6-application-mobile-flutter)
 7. [Boutons de téléchargement (accueil)](#7-boutons-de-téléchargement-accueil)
@@ -151,60 +151,51 @@ OTP de développement : **`123456`**
 
 ---
 
-## 4. Web app — production
+## 4. Web app — production (OVH)
 
-### Étape 1 — Variables d’environnement
+**Cible officielle :** VPS OVH Cloud, domaine **`fallaman.gabomazone.com`**.
 
-Créez un `.env` de production (ne pas committer) :
+Manuel complet (DNS, Docker, TLS, SingPay, GitHub Actions, rollback) :
+
+→ **[DEPLOIEMENT_OVH.md](DEPLOIEMENT_OVH.md)**  
+→ Architecture : [ARCHITECTURE.md](ARCHITECTURE.md)
+
+### Résumé express
+
+```bash
+# Sur le VPS
+cd /var/www/fallaman/Fallaman
+cp .env.production.example .env   # renseigner secrets
+docker compose up -d --build
+make health
+# Puis nginx hôte + certbot (voir le manuel)
+```
+
+Variables clés (extrait) :
 
 ```env
 DJANGO_SETTINGS_MODULE=config.settings.production
-DJANGO_SECRET_KEY=une-clé-longue-et-secrète
-DJANGO_DEBUG=false
-DJANGO_ALLOWED_HOSTS=fallaman.ga,www.fallaman.ga
-DJANGO_CSRF_TRUSTED_ORIGINS=https://fallaman.ga,https://www.fallaman.ga
-DJANGO_SECURE_SSL_REDIRECT=true
-
-DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/fallaman
-REDIS_URL=redis://HOST:6379/0
-CELERY_BROKER_URL=redis://HOST:6379/1
-CELERY_RESULT_BACKEND=redis://HOST:6379/2
-CELERY_TASK_ALWAYS_EAGER=false
-
-OTP_PROVIDER=console
-# Remplacer par le vrai provider SMS en prod
-
-ANDROID_APP_URL=https://play.google.com/store/apps/details?id=com.fallaman.fallaman_mobile
-IOS_APP_URL=https://apps.apple.com/app/idXXXXXXXX
+DJANGO_SECRET_KEY=…
+DJANGO_ALLOWED_HOSTS=fallaman.gabomazone.com
+DJANGO_CSRF_TRUSTED_ORIGINS=https://fallaman.gabomazone.com
+FALLAMAN_HTTP_PORT=8080
+POSTGRES_PASSWORD=…
+OTP_PROVIDER=email
+# + SMTP + SingPay (obligatoires)
 ```
 
-### Étape 2 — Déploiement Docker (stack prod du dépôt)
+### Checklist courte
 
-```powershell
-.\dev.ps1 prod
-```
+- [ ] HTTPS + `/health/` → 200
+- [ ] Redis / Celery actifs
+- [ ] OTP e-mail réel (jamais `console`)
+- [ ] Webhook SingPay pointant vers le domaine
+- [ ] Secrets GitHub `OVH_*` pour le deploy automatique
 
-Ou, sur le serveur :
+### Étape — Fichiers statiques et médias
 
-```bash
-docker compose up -d --build
-docker compose exec web python manage.py migrate
-docker compose exec web python manage.py collectstatic --noinput
-```
-
-### Étape 3 — Checklist production
-
-- [ ] `DJANGO_DEBUG=false` et `SECRET_KEY` fort
-- [ ] HTTPS + `CSRF_TRUSTED_ORIGINS` corrects
-- [ ] PostgreSQL (pas SQLite) et sauvegardes
-- [ ] Redis / Celery actifs pour les tâches (expiration annonces, conversations…)
-- [ ] Provider OTP SMS configuré (plus le code fixe `123456`)
-- [ ] Liens Play Store / App Store renseignés (`ANDROID_APP_URL`, `IOS_APP_URL`)
-- [ ] URL de production cohérente avec l’app mobile (`FALLAMAN_URL`)
-
-### Étape 4 — Fichiers statiques et médias
-
-Les statics sont servis via WhiteNoise. Les uploads vont dans `MEDIA_ROOT` (volume persistant recommandé en Docker).
+Les statics sont collectés au démarrage du conteneur `web` et servis par nginx
+Docker. Les uploads (`MEDIA`) vivent dans le volume Docker `media_files`.
 
 ---
 
@@ -248,7 +239,7 @@ via `DEMO_STAFF_PASSWORD` dans `.env` (valeur locale par défaut :
 
 En production, utiliser `seed_demo --reference-only` (métiers et villes
 uniquement) puis `createsuperuser`. Voir
-[DEPLOIEMENT_PYTHONANYWHERE.md](DEPLOIEMENT_PYTHONANYWHERE.md).
+[DEPLOIEMENT_OVH.md](DEPLOIEMENT_OVH.md).
 
 ---
 
@@ -404,15 +395,15 @@ SINGPAY_API_SECRET=
 SINGPAY_MERCHANT_ID=
 SINGPAY_DISBURSEMENT_ID=
 SINGPAY_ENVIRONMENT=sandbox
-SINGPAY_MOCK=false
 ```
 
-Sans clés (ou `SINGPAY_MOCK=true`) : **paiement simulé** local (`/paiements/simulation/...`).
+Sans ces identifiants, le paiement est **indisponible** (aucune simulation locale).
+En production, les quatre variables sont obligatoires.
 
 ### Parcours UI
 
-1. Annonce → **Gérer** → **Mettre en avant** → choisir durée → payer  
-2. Profil → **Demander à être recommandé** → durée → payer  
+1. Annonce → **Gérer** → **Boostez la visibilité** → choisir durée → payer
+2. Profil → **Boostez la visibilité** → durée → payer
 3. Historique : `/mes-recommandations/`
 
 ### Ranking
@@ -451,7 +442,7 @@ flutter test
 | OTP refusé | En dev, utiliser `123456` ; vérifier `OTP_DEV_CODE` |
 | Docker « not running » | Démarrer Docker Desktop puis `.\dev.ps1` |
 | WhatsApp ne s’ouvre pas depuis l’app | Application WhatsApp installée ; schemes déclarés Android/iOS |
-| Paiement SingPay échoue | Vérifier les 3 clés ; sinon laisser vide pour le mock local |
+| Paiement SingPay échoue | Vérifier `SINGPAY_API_KEY`, `SINGPAY_API_SECRET`, `SINGPAY_MERCHANT_ID`, `SINGPAY_DISBURSEMENT_ID` |
 | Boost inactif après paiement | Vérifier webhook `/paiements/singpay/callback/` ou page retour ; Celery `expire-recommendation-boosts` |
 
 ---

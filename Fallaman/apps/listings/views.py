@@ -50,8 +50,12 @@ def search(request):
     context = {
         "listings": page,
         "query": query,
-        "cities": City.objects.filter(is_popular=True),
-        "provinces": Province.objects.all(),
+        # Toutes les villes : le champ est libre, mais la liste de suggestions
+        # ne doit pas se limiter aux villes « populaires ».
+        "cities": City.objects.order_by("name"),
+        "provinces": Province.objects.order_by("sort_order", "name"),
+        "duration_choices": Listing.Duration.choices,
+        "availability_choices": Listing.Availability.choices,
         "page_obj": page,
         "popular_terms": popular_searches(),
     }

@@ -16,7 +16,7 @@
         {% if profile.is_recommended %}
           <p class="boost-live-banner mb-2">
             <i class="bi bi-rocket-takeoff-fill" aria-hidden="true"></i>
-            Profil recommandé
+            Profil boosté
             {% if profile.recommended_until %} jusqu'au {{ profile.recommended_until|date:"d/m/Y H:i" }}{% endif %}
           </p>
         {% endif %}

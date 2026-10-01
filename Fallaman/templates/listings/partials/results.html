@@ -9,13 +9,14 @@
   {% endfor %}
 </div>
 {% if page_obj.has_other_pages %}
+  {# querystring reconduit les filtres actifs : « ?q=…&page=N » les perdait tous. #}
   <nav class="pagination-simple mt-3">
     {% if page_obj.has_previous %}
-      <a href="?q={{ query }}&page={{ page_obj.previous_page_number }}">Précédent</a>
+      <a href="{% querystring page=page_obj.previous_page_number %}">Précédent</a>
     {% endif %}
-    <span>Page {{ page_obj.number }}</span>
+    <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
     {% if page_obj.has_next %}
-      <a href="?q={{ query }}&page={{ page_obj.next_page_number }}">Suivant</a>
+      <a href="{% querystring page=page_obj.next_page_number %}">Suivant</a>
     {% endif %}
   </nav>
 {% endif %}

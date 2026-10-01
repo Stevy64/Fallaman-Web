@@ -3,21 +3,23 @@
 > Trouvez quelqu'un. Trouvez du travail.
 
 Plateforme de mise en relation entre particuliers et travailleurs au Gabon
-(nounous, maçons, chauffeurs, ménage…). Django 5.2, HTMX, PostgreSQL.
+(nounous, maçons, chauffeurs, ménage…). Django 5.2, HTMX, PostgreSQL, Celery.
+
+**Production :** https://fallaman.gabomazone.com (OVH Cloud, Docker micro-services).
 
 ## Structure du dépôt
 
-Le projet Django vit dans le sous-dossier [`Fallaman/`](Fallaman/) — c'est là
-que se trouve `manage.py`.
-
 ```
-Fallaman/
-├── apps/            applications métier (annonces, paiements, messagerie…)
-├── config/          réglages Django (base / development / production)
-├── templates/       gabarits HTML
-├── tests/           suite pytest
-├── deploy/          fichier WSGI pour PythonAnywhere
-└── docs/            prise en main et déploiement
+Fallaman_web/
+├── .github/workflows/   CI + déploiement OVH
+├── README.md
+└── Fallaman/            projet Django (manage.py)
+    ├── apps/            applications métier
+    ├── config/          réglages (base / development / production)
+    ├── deploy/          nginx, update.sh
+    ├── docs/            architecture & manuels
+    ├── docker-compose.yml
+    └── Dockerfile
 ```
 
 ## Démarrer en local
@@ -27,16 +29,10 @@ cd Fallaman
 docker compose -f docker-compose.dev.yml up
 ```
 
-Le site répond sur http://localhost:8001.
+Site : http://localhost:8001  
+OTP console : `123456` (logs `FALLAMAN DEV`).
 
-En développement, le code de connexion s'affiche dans les logs du conteneur
-(`OTP_PROVIDER=console`, code `123456`) :
-
-```bash
-docker compose -f docker-compose.dev.yml logs -f web | grep "FALLAMAN DEV"
-```
-
-Sans Docker : voir [Fallaman/docs/PRISE_EN_MAIN.md](Fallaman/docs/PRISE_EN_MAIN.md).
+Sans Docker : [Fallaman/docs/PRISE_EN_MAIN.md](Fallaman/docs/PRISE_EN_MAIN.md).
 
 ## Tests
 
@@ -45,33 +41,33 @@ cd Fallaman
 python -m pytest
 ```
 
-## Déploiement
+CI GitHub : `.github/workflows/ci.yml` (pytest + build image + smoke OVH).
 
-Voir [Fallaman/docs/DEPLOIEMENT_PYTHONANYWHERE.md](Fallaman/docs/DEPLOIEMENT_PYTHONANYWHERE.md).
+## Déploiement production (OVH)
 
-Deux points à connaître avant de déployer :
+Manuel détaillé :
 
-- **Un compte PythonAnywhere payant est nécessaire.** Les comptes gratuits
-  n'ont pas d'accès sortant libre : ni l'envoi des codes par e-mail (SMTP), ni
-  les appels à SingPay ne fonctionneraient.
-- `config/settings/production.py` **refuse de démarrer** si un réglage
-  sensible est laissé en l'état (clé secrète d'exemple, `OTP_PROVIDER=console`,
-  `SINGPAY_MOCK=true`…). C'est volontaire : chacun de ces cas est directement
-  exploitable.
+**[Fallaman/docs/DEPLOIEMENT_OVH.md](Fallaman/docs/DEPLOIEMENT_OVH.md)**
+
+Architecture micro-services :
+
+**[Fallaman/docs/ARCHITECTURE.md](Fallaman/docs/ARCHITECTURE.md)**
+
+Résumé :
+
+1. VPS Ubuntu + Docker + nginx + Certbot
+2. DNS `fallaman.gabomazone.com` → IP VPS
+3. `Fallaman/.env` depuis `.env.production.example`
+4. `docker compose up -d --build` puis TLS
+5. GitHub Actions Deploy (secrets `OVH_*`)
+
+Alternative historique : [Fallaman/docs/DEPLOIEMENT_PYTHONANYWHERE.md](Fallaman/docs/DEPLOIEMENT_PYTHONANYWHERE.md).
 
 ## Connexion
 
-- **Première connexion / mot de passe oublié** — un code à six chiffres part
-  par e-mail, puis le membre choisit son mot de passe.
-- **Connexions suivantes** — numéro de téléphone + mot de passe.
-
-Pour un compte existant, le code part toujours à l'adresse enregistrée, jamais
-à celle saisie dans le formulaire : sans cette règle, connaître un numéro de
-téléphone suffirait à s'emparer du compte.
+- Première connexion / mot de passe oublié → code e-mail → mot de passe
+- Ensuite → téléphone + mot de passe
 
 ## Paiements
 
-Recommandations payantes (mise en avant d'annonce ou de profil) via
-**SingPay**. Avant toute activation, deux vérifications indépendantes :
-signature HMAC du webhook, **et** statut reconfirmé auprès de l'API SingPay par
-un appel serveur-à-serveur. Le montant encaissé doit égaler le montant attendu.
+Boosts payants via **SingPay** (HMAC webhook + verify serveur-à-serveur).

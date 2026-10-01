@@ -24,9 +24,13 @@ logger = logging.getLogger(__name__)
 LOG_PREFIX = "[SingPay]"
 
 #: Statuts fournisseur considérés comme un encaissement effectif.
-SUCCESS_STATUSES = frozenset({"success", "successful", "paid", "completed", "done"})
+SUCCESS_STATUSES = frozenset(
+    {"success", "successful", "paid", "completed", "done", "ok", "validated"}
+)
 #: Statuts fournisseur considérés comme définitivement échoués.
-FAILURE_STATUSES = frozenset({"failed", "error", "cancelled", "canceled", "expired", "rejected"})
+FAILURE_STATUSES = frozenset(
+    {"failed", "error", "cancelled", "canceled", "expired", "rejected", "fail"}
+)
 
 
 class SingPayError(Exception):
@@ -77,8 +81,15 @@ class SingPayService:
         )
 
     @property
+    def logo_url(self) -> str:
+        return getattr(settings, "SINGPAY_LOGO_URL", "") or ""
+
+    @property
     def is_configured(self) -> bool:
-        return bool(self.api_key and self.api_secret and self.merchant_id)
+        required = bool(self.api_key and self.api_secret and self.merchant_id)
+        if (self.environment or "").lower() == "production":
+            return required and bool(self.disbursement_id)
+        return required
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -104,7 +115,14 @@ class SingPayService:
                 response = requests.post(url, headers=headers, json=data or {}, timeout=30)
             response.raise_for_status()
             payload = response.json() if response.content else {}
-            return True, payload if isinstance(payload, dict) else {"data": payload}
+            if not isinstance(payload, dict):
+                return True, {"data": payload}
+            # Certaines erreurs SingPay arrivent en HTTP 200 avec un champ error.
+            if payload.get("error") and not (
+                payload.get("link") or payload.get("payment_url") or payload.get("status")
+            ):
+                return False, {"error": str(payload.get("error")), "response": payload}
+            return True, payload
         except requests.RequestException as exc:
             # Pas de logger.exception ici : la trace embarque la requête, donc les
             # en-têtes x-client-secret.
@@ -151,23 +169,19 @@ class SingPayService:
         amount = int(amount)
         if amount <= 0:
             return False, {"error": "invalid amount", "details": "Le montant doit être positif."}
+        # Corps aligné sur le SDK officiel (generatePaymentLink) : les champs
+        # supplémentaires (phone, order_id, callback_url…) font échouer /ext.
         data = {
             "portefeuille": self.merchant_id,
             "reference": f"REF-{order_id}",
+            "amount": amount,
             "redirect_success": return_url,
             "redirect_error": return_url,
-            "amount": amount,
-            "disbursement": self.disbursement_id,
-            "logoURL": "",
-            "isTransfer": False,
-            "order_id": order_id,
         }
-        if description:
-            data["description"] = description
-        if customer_phone:
-            data["phone"] = customer_phone
-        if callback_url:
-            data["callback_url"] = callback_url
+        if self.disbursement_id:
+            data["disbursement"] = self.disbursement_id
+        if self.logo_url:
+            data["logoURL"] = self.logo_url
 
         success, response = self._request("POST", "/v1/ext", data)
         if not success:
@@ -183,28 +197,63 @@ class SingPayService:
             "raw": response,
         }
 
-    def verify_payment(self, transaction_id: str) -> tuple[bool, dict]:
-        """Interroge l'API : seule source de vérité sur le statut et le montant."""
-        transaction_id = (transaction_id or "").strip()
-        if not transaction_id:
-            return False, {"error": "missing transaction id"}
-        success, response = self._request("GET", f"/v1/transaction/{transaction_id}")
-        if not success:
-            return False, response
-        # Certaines réponses encapsulent la transaction dans "data"/"transaction".
+    def _unwrap_transaction(self, response: dict) -> dict:
         body = response
         for key in ("data", "transaction"):
             nested = response.get(key)
             if isinstance(nested, dict) and nested:
                 body = nested
                 break
-        return True, {
-            "status": str(body.get("status") or "").lower(),
-            "amount": body.get("amount"),
-            "order_id": body.get("order_id") or body.get("reference"),
-            "transaction_id": (body.get("transaction_id") or body.get("id") or transaction_id),
-            "raw": response,
+        return body
+
+    def _normalize_transaction(self, body: dict, fallback_id: str = "") -> dict:
+        status = body.get("status") or body.get("statut") or body.get("state") or ""
+        return {
+            "status": str(status).lower(),
+            "amount": body.get("amount") if body.get("amount") is not None else body.get("montant"),
+            "order_id": body.get("order_id") or body.get("reference") or body.get("ref"),
+            "transaction_id": (
+                body.get("transaction_id") or body.get("id") or body.get("_id") or fallback_id
+            ),
+            "raw": body,
         }
+
+    def verify_payment(self, transaction_id: str) -> tuple[bool, dict]:
+        """Interroge l'API : seule source de vérité sur le statut et le montant."""
+        transaction_id = (transaction_id or "").strip()
+        if not transaction_id:
+            return False, {"error": "missing transaction id"}
+        last_error: dict = {"error": "missing transaction id"}
+        for endpoint in (
+            f"/v1/transaction/api/{transaction_id}",
+            f"/v1/transaction/api/status/{transaction_id}",
+            f"/v1/transaction/{transaction_id}",
+        ):
+            success, response = self._request("GET", endpoint)
+            if success:
+                body = self._unwrap_transaction(response)
+                return True, self._normalize_transaction(body, transaction_id)
+            last_error = response
+        return False, last_error
+
+    def find_payment_by_reference(self, order_id: str) -> tuple[bool, dict]:
+        """Retombe utilisée quand SingPay n'a pas encore renvoyé d'identifiant."""
+        order_id = (order_id or "").strip()
+        if not order_id:
+            return False, {"error": "missing reference"}
+        references = [order_id]
+        if not order_id.startswith("REF-"):
+            references.append(f"REF-{order_id}")
+        last_error: dict = {"error": "missing reference"}
+        for reference in references:
+            success, response = self._request(
+                "GET", f"/v1/transaction/api/search/by-reference/{reference}"
+            )
+            if success:
+                body = self._unwrap_transaction(response)
+                return True, self._normalize_transaction(body)
+            last_error = response
+        return False, last_error
 
     def _signature_candidates(self, raw_body: str, timestamp: str) -> list[str]:
         """

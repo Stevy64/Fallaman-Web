@@ -1,11 +1,10 @@
-"""Création de paiements SingPay + mode simulé (développement uniquement)."""
+"""Création de paiements SingPay (encaissement réel uniquement)."""
 
 from __future__ import annotations
 
 import logging
 import uuid
 
-from django.conf import settings
 from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
@@ -16,23 +15,21 @@ from apps.payments.services.singpay import singpay_service
 logger = logging.getLogger(__name__)
 
 
-def singpay_mock_enabled() -> bool:
-    """
-    Le paiement simulé crédite un achat sans encaisser un franc.
-
-    Il ne s'active donc que sur demande explicite (``SINGPAY_MOCK``) ou en
-    développement. Une configuration SingPay absente en production doit rendre
-    le paiement *indisponible*, surtout pas gratuit.
-    """
-    if getattr(settings, "SINGPAY_MOCK", False):
-        return True
-    if singpay_service.is_configured:
-        return False
-    return bool(getattr(settings, "DEV_CONVENIENCES", False))
-
-
 def build_absolute(request, path: str) -> str:
     return request.build_absolute_uri(path)
+
+
+def _singpay_user_error(data: dict) -> str:
+    nested = data.get("response")
+    if isinstance(nested, dict):
+        for key in ("message", "error", "detail", "details"):
+            value = nested.get(key)
+            if value:
+                return str(value)
+    text = data.get("response_text")
+    if text:
+        return str(text)[:200]
+    return str(data.get("error") or data.get("details") or "Initialisation SingPay impossible.")
 
 
 def create_payment(
@@ -44,29 +41,22 @@ def create_payment(
     description: str,
     metadata: dict,
 ) -> tuple[PaymentTransaction, str]:
-    """
-    Crée une transaction et renvoie (tx, payment_url).
-    En simulation : URL vers la page de confirmation simulée.
-    """
+    """Crée une transaction SingPay et renvoie ``(tx, payment_url)``."""
     amount = int(amount)
     if amount <= 0:
         raise RuntimeError("Montant de paiement invalide.")
 
-    use_mock = singpay_mock_enabled()
-    if not use_mock and not singpay_service.is_configured:
+    if not singpay_service.is_configured:
         raise RuntimeError(
             "Le service de paiement n'est pas configuré. Contactez l'équipe Fallaman."
         )
 
     reference = f"FLM-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8].upper()}"
-    provider = (
-        PaymentTransaction.Provider.MOCK if use_mock else PaymentTransaction.Provider.SINGPAY
-    )
 
     tx = PaymentTransaction.objects.create(
         user=user,
         purpose=purpose,
-        provider=provider,
+        provider=PaymentTransaction.Provider.SINGPAY,
         amount=amount,
         description=description,
         reference=reference,
@@ -79,15 +69,6 @@ def create_payment(
     )
     callback_url = build_absolute(request, reverse("payments:callback"))
 
-    if use_mock:
-        payment_url = build_absolute(
-            request,
-            reverse("payments:mock_checkout", kwargs={"public_id": tx.public_id}),
-        )
-        tx.payment_url = payment_url
-        tx.save(update_fields=["payment_url", "updated_at"])
-        return tx, payment_url
-
     phone = getattr(user, "phone_number", "") or ""
     ok, data = singpay_service.init_payment(
         amount=amount,
@@ -99,7 +80,7 @@ def create_payment(
     )
     if not ok or not data.get("payment_url"):
         tx.mark_failed()
-        raise RuntimeError(data.get("error") or data.get("details") or "SingPay init failed")
+        raise RuntimeError(_singpay_user_error(data))
 
     tx.provider_transaction_id = data.get("transaction_id") or ""
     tx.payment_url = data["payment_url"]

@@ -15,7 +15,7 @@ from django.test import override_settings
 from django.urls import reverse
 
 from apps.payments.models import PaymentTransaction, SingPayWebhookLog
-from apps.payments.services.checkout import apply_payment_success, singpay_mock_enabled
+from apps.payments.services.checkout import apply_payment_success, create_payment
 from apps.payments.services.singpay import SingPayService
 from apps.recommendations.models import RecommendationPurchase
 
@@ -25,7 +25,6 @@ SINGPAY_CONFIGURED = dict(
     SINGPAY_API_KEY="cle",
     SINGPAY_API_SECRET=WEBHOOK_SECRET,
     SINGPAY_MERCHANT_ID="wallet",
-    SINGPAY_MOCK=False,
     DEV_CONVENIENCES=False,
 )
 
@@ -205,7 +204,7 @@ def test_double_encaissement_nactive_quune_fois(user, db):
     tx = PaymentTransaction.objects.create(
         user=user,
         purpose=PaymentTransaction.Purpose.PROFILE_BOOST,
-        provider=PaymentTransaction.Provider.MOCK,
+        provider=PaymentTransaction.Provider.SINGPAY,
         amount=1200,
         reference="FLM-IDEMP-1",
         metadata={},
@@ -231,29 +230,72 @@ def test_double_encaissement_nactive_quune_fois(user, db):
     assert RecommendationPurchase.objects.filter(payment=tx).count() == 1
 
 
-# ── Mode simulé ─────────────────────────────────────────────────────────
+# ── Configuration obligatoire ───────────────────────────────────────────
 
 
 @pytest.mark.django_db
-@override_settings(
-    SINGPAY_API_KEY="", SINGPAY_API_SECRET="", SINGPAY_MERCHANT_ID="", SINGPAY_MOCK=False
-)
-def test_mock_desactive_quand_singpay_nest_pas_configure_hors_dev():
+@override_settings(SINGPAY_API_KEY="", SINGPAY_API_SECRET="", SINGPAY_MERCHANT_ID="")
+def test_paiement_indisponible_sans_identifiants_singpay(user, rf):
     """Une configuration SingPay manquante rend le paiement indisponible, pas gratuit."""
-    with override_settings(DEV_CONVENIENCES=False):
-        assert singpay_mock_enabled() is False
-    with override_settings(DEV_CONVENIENCES=True):
-        assert singpay_mock_enabled() is True
+    request = rf.get("/")
+    request.user = user
+    request.META["HTTP_HOST"] = "testserver"
+    with pytest.raises(RuntimeError, match="n'est pas configuré"):
+        create_payment(
+            request=request,
+            user=user,
+            purpose=PaymentTransaction.Purpose.PROFILE_BOOST,
+            amount=1200,
+            description="test",
+            metadata={},
+        )
 
 
 @pytest.mark.django_db
 @override_settings(**SINGPAY_CONFIGURED)
-def test_page_de_paiement_simule_absente_hors_dev(client, user, transaction):
+def test_create_payment_redirige_vers_singpay(user, rf):
+    request = rf.get("/")
+    request.user = user
+    request.META["HTTP_HOST"] = "testserver"
+    init = {
+        "payment_url": "https://gateway.singpay.ga/pay/abc",
+        "transaction_id": "tx-init-1",
+        "reference": "REF-FLM-1",
+    }
+    with mock.patch.object(SingPayService, "init_payment", return_value=(True, init)):
+        tx, url = create_payment(
+            request=request,
+            user=user,
+            purpose=PaymentTransaction.Purpose.PROFILE_BOOST,
+            amount=1200,
+            description="test",
+            metadata={},
+        )
+    assert url == init["payment_url"]
+    assert tx.provider == PaymentTransaction.Provider.SINGPAY
+    assert tx.provider_transaction_id == "tx-init-1"
+
+
+@pytest.mark.django_db
+@override_settings(**SINGPAY_CONFIGURED)
+def test_retour_navigateur_confirme_via_query_singpay(client, user, transaction):
     client.force_login(user)
-    response = client.get(
-        reverse("payments:mock_checkout", kwargs={"public_id": transaction.public_id})
-    )
-    assert response.status_code == 404
+    verified = {
+        "status": "success",
+        "amount": transaction.amount,
+        "order_id": transaction.reference,
+        "transaction_id": "tx-depuis-retour",
+        "raw": {},
+    }
+    with mock.patch.object(SingPayService, "verify_payment", return_value=(True, verified)):
+        response = client.get(
+            reverse("payments:return", kwargs={"public_id": transaction.public_id}),
+            {"transaction_id": "tx-depuis-retour"},
+        )
+    assert response.status_code == 302
+    transaction.refresh_from_db()
+    assert transaction.status == PaymentTransaction.Status.SUCCESS
+    assert transaction.provider_transaction_id == "tx-depuis-retour"
 
 
 # ── Client SingPay ──────────────────────────────────────────────────────
@@ -268,6 +310,29 @@ def test_montant_envoye_en_entier():
     envoye = req.call_args[0][2]
     assert envoye["amount"] == 1200
     assert isinstance(envoye["amount"], int)
+    assert set(envoye) <= {
+        "portefeuille",
+        "reference",
+        "amount",
+        "redirect_success",
+        "redirect_error",
+        "disbursement",
+        "logoURL",
+    }
+    assert "phone" not in envoye
+    assert "order_id" not in envoye
+    assert "isTransfer" not in envoye
+
+
+@override_settings(
+    SINGPAY_API_KEY="cle",
+    SINGPAY_API_SECRET="secret",
+    SINGPAY_MERCHANT_ID="wallet",
+    SINGPAY_DISBURSEMENT_ID="",
+    SINGPAY_ENVIRONMENT="production",
+)
+def test_production_exige_le_disbursement():
+    assert SingPayService().is_configured is False
 
 
 @override_settings(**SINGPAY_CONFIGURED)

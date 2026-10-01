@@ -1,3 +1,26 @@
+"""Discussions éphémères entre un pourvoyeur et un candidat.
+
+La messagerie est volontairement temporaire : Fallaman met en relation, puis
+s'efface au profit du téléphone ou de WhatsApp. Deux échéances courent donc en
+parallèle, et c'est la **plus proche** qui fait foi (``effective_expiry``) :
+
+* ``expires_at`` — inactivité. Repoussée à chaque message par ``touch()``, de
+  ``CONVERSATION_IDLE_HOURS`` (72 h par défaut).
+* ``hard_expires_at`` — plafond absolu, fixé à la création à
+  ``CONVERSATION_MAX_DAYS`` (7 jours). Jamais repoussé : une discussion ne peut
+  pas durer indéfiniment à coups de messages.
+
+À l'expiration, les messages sont **supprimés** (voir
+``tasks.expire_conversations`` et la vue du fil) : ne comptez pas sur cette
+table pour un historique.
+
+Les deux participants sont rangés dans ``user_low``/``user_high`` par ordre de
+clé primaire. Ce n'est pas cosmétique : c'est ce qui permet à la contrainte
+d'unicité de garantir une seule discussion par couple et par annonce, quel que
+soit celui qui écrit en premier. Passez toujours par
+``Conversation.objects.get_or_create_for()``.
+"""
+
 from datetime import timedelta
 
 from django.conf import settings

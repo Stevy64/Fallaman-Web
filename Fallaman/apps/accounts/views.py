@@ -48,7 +48,7 @@ def login_view(request):
     if request.method == "POST" and form.is_valid():
         phone = form.cleaned_data["phone_number"]
         try:
-            login_with_password(request, phone, form.cleaned_data["password"])
+            user = login_with_password(request, phone, form.cleaned_data["password"])
         except OTPError as exc:
             form.add_error(None, str(exc))
             # Compte sans mot de passe : orienter vers l'activation plutôt que
@@ -60,7 +60,12 @@ def login_view(request):
                     "Utilisez « Première connexion » pour en choisir un.",
                 )
         else:
-            messages.success(request, "Connexion réussie. Bienvenue sur Fallaman.")
+            profile = getattr(user, "profile", None)
+            prenom = (profile.first_name or profile.display_name or "").strip() if profile else ""
+            messages.success(
+                request,
+                f"Bon retour parmi nous, {prenom} !" if prenom else "Bon retour parmi nous !",
+            )
             return redirect(
                 safe_redirect_target(
                     form.cleaned_data.get("next"), "core:home", request=request
@@ -130,7 +135,7 @@ def set_password_view(request):
     form = ChoosePasswordForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
-            complete_activation(
+            user, created = complete_activation(
                 request,
                 pending["phone"],
                 pending.get("email", ""),
@@ -144,16 +149,28 @@ def set_password_view(request):
         else:
             target = pending.get("next") or ""
             request.session.pop(ACTIVATION_SESSION_KEY, None)
-            messages.success(
-                request,
-                "Mot de passe enregistré. Utilisez-le pour vos prochaines connexions.",
-            )
+
+            # Première connexion : le profil est vide, et sans lui la personne
+            # n'est visible de personne. On l'emmène donc le remplir plutôt que
+            # de la déposer sur l'accueil.
+            profile = getattr(user, "profile", None)
+            if created or not (profile and profile.is_complete):
+                messages.success(
+                    request,
+                    "Bienvenue sur Fallaman ! Complétez votre profil pour être "
+                    "visible des employeurs et pouvoir répondre aux annonces.",
+                )
+                return redirect("profiles:mine")
+
+            messages.success(request, "Mot de passe mis à jour. Bon retour parmi nous.")
             return redirect(safe_redirect_target(target, "core:home", request=request))
     return render(request, "accounts/set_password.html", {"form": form})
 
 
 @require_http_methods(["GET", "POST"])
 def staff_login_view(request):
+    if not settings.DEV_CONVENIENCES:
+        raise Http404
     if request.user.is_authenticated and request.user.is_staff:
         return redirect("dashboard:home")
     initial = {"next": request.GET.get("next", "")}
@@ -227,7 +244,7 @@ def ensure_demo_staff_user():
 def staff_demo_login_view(request):
     """Connexion one-click du compte admin, uniquement en développement."""
     if not settings.DEV_CONVENIENCES:
-        return redirect("accounts:staff_login")
+        raise Http404
     user = ensure_demo_staff_user()
     login(request, user, backend="apps.accounts.backends.PhoneModelBackend")
     messages.success(request, "Connecté avec le compte démo.")

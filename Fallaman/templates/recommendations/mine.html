@@ -1,16 +1,19 @@
 {% extends "base.html" %}
 {% load fallaman_tags %}
-{% block title %}Mes recommandations — Fallaman{% endblock %}
+{% block title %}Mes boosts — Fallaman{% endblock %}
 {% block content %}
 <section class="container-narrow py-4 page-enter">
   <div class="page-shell">
-    <h1 class="h4 mb-3">Mes recommandations</h1>
+    <a class="categories-back" href="{% url 'profiles:mine' %}">
+      <i class="bi bi-arrow-left"></i> Mon profil
+    </a>
+    <h1 class="h4 mb-3">Mes boosts</h1>
     <div class="listing-stack">
       {% for item in purchases %}
         <article class="reco-history-card">
           <div class="d-flex justify-content-between gap-2">
             <strong>
-              {% if item.kind == "listing" %}Boost annonce{% else %}Profil recommandé{% endif %}
+              {% if item.kind == "listing" %}Boost annonce{% else %}Boost profil{% endif %}
             </strong>
             <span class="tag {% if item.status == 'active' %}is-boost{% endif %}">{{ item.get_status_display }}</span>
           </div>
@@ -24,8 +27,10 @@
         </article>
       {% empty %}
         <div class="empty-state">
-          <p>Aucune recommandation pour le moment.</p>
-          <a class="btn btn-accent" href="{% url 'recommendations:boost_profile' %}">Être recommandé</a>
+          <p>Aucun boost pour le moment.</p>
+          <a class="btn btn-accent" href="{% url 'recommendations:boost_profile' %}">
+            Boostez la visibilité de votre profil
+          </a>
         </div>
       {% endfor %}
     </div>

@@ -4,8 +4,10 @@
 
 Fallaman est une PWA mobile-first de mise en relation, pensée pour le Gabon. Un particulier peut chercher du travail et publier une annonce avec le même compte, sans profil entreprise ni CV obligatoire.
 
-> **Documentation complète (web + mobile, dev et prod) :**  
-> **[docs/PRISE_EN_MAIN.md](docs/PRISE_EN_MAIN.md)** — guide pas à pas.
+> **Documentation :**  
+> - [docs/PRISE_EN_MAIN.md](docs/PRISE_EN_MAIN.md) — guide local  
+> - [docs/DEPLOIEMENT_OVH.md](docs/DEPLOIEMENT_OVH.md) — **production OVH** (`fallaman.gabomazone.com`)  
+> - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — micro-services & GitHub Actions
 
 ## Démarrage rapide (web, local)
 
@@ -30,11 +32,14 @@ En développement, le code est `123456` (affiché à l'écran et dans le termina
 Comptes de démonstration après `seed_demo --with-accounts` : `+24106222222` et
 `+24106333333`, mot de passe `FallamanDemo2026`.
 
-> Ces facilités (code OTP fixe, paiement simulé, compte équipe de
-> démonstration) dépendent de `DEV_CONVENIENCES=true`. La configuration de
-> production les désactive et refuse de démarrer si l'une d'elles est réactivée.
-> Pour la mise en ligne, voir
-> [docs/DEPLOIEMENT_PYTHONANYWHERE.md](docs/DEPLOIEMENT_PYTHONANYWHERE.md).
+> Ces facilités (code OTP fixe, compte équipe de démonstration) dépendent
+> de `DEV_CONVENIENCES=true`. La configuration de production les désactive
+> et refuse de démarrer si l'une d'elles est réactivée. Le paiement passe
+> exclusivement par SingPay (`SINGPAY_API_KEY`, `SINGPAY_API_SECRET`,
+> `SINGPAY_MERCHANT_ID`, `SINGPAY_DISBURSEMENT_ID`).
+> Pour la mise en ligne OVH, voir
+> [docs/DEPLOIEMENT_OVH.md](docs/DEPLOIEMENT_OVH.md).
+> (PythonAnywhere reste documenté à titre historique.)
 
 Créer un administrateur :
 
@@ -99,7 +104,7 @@ Sur l’accueil web, un **bouton double Android / iOS** pointe vers les liens co
 1. Visiteur : accueil → recherche `nounou` → annonce → partage
 2. Compte : téléphone → OTP → je suis intéressé → message → WhatsApp
 3. Publication : Publier → mission → métier → lieu → montant → description
-4. Boost optionnel : Gérer l’annonce → Mettre en avant → durée → SingPay
+4. Boost optionnel : Gérer l’annonce → Boostez la visibilité → durée → SingPay
 5. Demandeur : Profil → Être recommandé → durée → SingPay
 6. Pourvoyeur : Accepter / refuser le candidat recommandé → Discuter / WhatsApp
 7. Équipe : `/tableau-de-bord/` → alertes, recommandations, conversations, diffusions

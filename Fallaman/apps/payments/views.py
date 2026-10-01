@@ -3,13 +3,13 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import Http404, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from apps.payments.models import PaymentTransaction, SingPayWebhookLog
-from apps.payments.services.checkout import apply_payment_success, singpay_mock_enabled
+from apps.payments.services.checkout import apply_payment_success
 from apps.payments.services.singpay import (
     FAILURE_STATUSES,
     SUCCESS_STATUSES,
@@ -53,7 +53,11 @@ def _confirm_with_provider(tx: PaymentTransaction, provider_tx: str) -> tuple[st
     ce cas on ne décide rien.
     """
     candidate = provider_tx or tx.provider_transaction_id
-    ok, data = singpay_service.verify_payment(candidate)
+    ok, data = (False, {})
+    if candidate:
+        ok, data = singpay_service.verify_payment(candidate)
+    if not ok:
+        ok, data = singpay_service.find_payment_by_reference(tx.reference)
     if not ok:
         logger.warning(
             "[SingPay] vérification impossible pour %s : %s", tx.reference, data.get("error")
@@ -77,6 +81,9 @@ def _confirm_with_provider(tx: PaymentTransaction, provider_tx: str) -> tuple[st
         amount = int(float(amount)) if amount is not None else None
     except (TypeError, ValueError):
         amount = None
+    remote_id = str(data.get("transaction_id") or candidate or "").strip()
+    if remote_id:
+        _remember_provider_transaction_id(tx, remote_id)
     return str(data.get("status") or "").lower(), amount
 
 
@@ -120,8 +127,10 @@ def singpay_callback(request):
         return JsonResponse({"ok": False, "error": "invalid signature"}, status=400)
 
     reference = _extract_reference(payload)
-    provider_tx = str(payload.get("transaction_id") or payload.get("id") or "").strip()
+    provider_tx = _extract_provider_transaction_id(payload)
     tx = _find_transaction(reference, provider_tx)
+    if tx:
+        provider_tx = _remember_provider_transaction_id(tx, provider_tx)
     if not tx:
         # 200 volontaire : la passerelle n'a pas à rejouer indéfiniment un
         # événement qui ne nous concerne pas.
@@ -147,18 +156,38 @@ def singpay_callback(request):
     return JsonResponse({"ok": True})
 
 
+def _extract_provider_transaction_id(payload: dict) -> str:
+    for key in ("transaction_id", "id", "transactionId", "provider_reference"):
+        value = payload.get(key)
+        if value:
+            return str(value).strip()
+    return ""
+
+
+def _remember_provider_transaction_id(tx: PaymentTransaction, provider_tx: str) -> str:
+    """Conserve l'identifiant SingPay dès qu'il apparaît (retour navigateur ou webhook)."""
+    provider_tx = (provider_tx or "").strip()
+    if provider_tx and provider_tx != tx.provider_transaction_id:
+        tx.provider_transaction_id = provider_tx
+        tx.save(update_fields=["provider_transaction_id", "updated_at"])
+    return tx.provider_transaction_id or provider_tx
+
+
 @login_required
 @require_GET
 def payment_return(request, public_id):
     """Retour navigateur : on reconfirme auprès de SingPay, jamais d'après l'URL."""
     tx = get_object_or_404(PaymentTransaction, public_id=public_id, user=request.user)
 
-    if tx.status == PaymentTransaction.Status.PENDING and tx.provider_transaction_id:
-        status, amount = _confirm_with_provider(tx, tx.provider_transaction_id)
+    query_tx = _extract_provider_transaction_id(request.GET)
+    provider_tx = _remember_provider_transaction_id(tx, query_tx)
+
+    if tx.status == PaymentTransaction.Status.PENDING:
+        status, amount = _confirm_with_provider(tx, provider_tx)
         if status in SUCCESS_STATUSES:
             apply_payment_success(
                 tx,
-                provider_transaction_id=tx.provider_transaction_id,
+                provider_transaction_id=provider_tx,
                 verified_amount=amount,
             )
             tx.refresh_from_db()
@@ -167,36 +196,12 @@ def payment_return(request, public_id):
             tx.refresh_from_db()
 
     if tx.status == PaymentTransaction.Status.SUCCESS:
-        messages.success(request, "Paiement confirmé. Votre recommandation est active.")
+        messages.success(request, "Paiement confirmé. Votre boost est actif.")
     elif tx.status == PaymentTransaction.Status.FAILED:
         messages.error(request, "Le paiement n'a pas abouti. Vous pouvez réessayer.")
     else:
         messages.info(request, "Paiement en cours de confirmation…")
     return redirect(_success_redirect(tx))
-
-
-@login_required
-@require_http_methods(["GET", "POST"])
-def mock_checkout(request, public_id):
-    # Le paiement simulé crédite sans encaisser : il ne doit exister qu'en
-    # développement, jamais parce qu'une variable d'environnement manque.
-    if not singpay_mock_enabled():
-        raise Http404
-    tx = get_object_or_404(PaymentTransaction, public_id=public_id, user=request.user)
-    if tx.provider != PaymentTransaction.Provider.MOCK:
-        return redirect("payments:return", public_id=tx.public_id)
-
-    if request.method == "POST":
-        action = request.POST.get("action")
-        if action == "pay":
-            apply_payment_success(tx, provider_transaction_id=f"MOCK-{tx.reference}")
-            messages.success(request, "Paiement simulé réussi. Recommandation activée.")
-            return redirect(_success_redirect(tx))
-        tx.mark_failed()
-        messages.info(request, "Paiement simulé annulé.")
-        return redirect(_success_redirect(tx))
-
-    return render(request, "payments/mock_checkout.html", {"tx": tx})
 
 
 def _success_redirect(tx: PaymentTransaction):

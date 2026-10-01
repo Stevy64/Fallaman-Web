@@ -85,7 +85,7 @@ def boost_profile(request):
     if not profile.is_complete:
         messages.info(
             request,
-            "Complétez votre profil (nom, ville, métier) avant de demander une recommandation.",
+            "Complétez votre profil (nom, ville, métier) avant de booster sa visibilité.",
         )
         return redirect("profiles:mine")
 
@@ -110,7 +110,7 @@ def boost_profile(request):
                 user=request.user,
                 purpose=PaymentTransaction.Purpose.PROFILE_BOOST,
                 amount=price.amount,
-                description=f"Recommandation profil — {price.label}",
+                description=f"Boost profil — {price.label}",
                 metadata={
                     "purchase_id": purchase.pk,
                     "profile_id": profile.pk,

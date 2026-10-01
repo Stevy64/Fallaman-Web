@@ -1,7 +1,9 @@
 {% extends "base.html" %}
+{% load fallaman_tags %}
 {% block title %}Rechercher — Fallaman{% endblock %}
 {% block body_class %}page-search{% endblock %}
 {% block content %}
+{% active_filter_count as filter_count %}
 <div class="search-page page-enter">
   <section class="search-stage">
     <div class="container-narrow">
@@ -13,24 +15,29 @@
     <div class="search-sheet">
       <div class="container-narrow">
         <form class="search-shell" action="{% url 'listings:search' %}" method="get" hx-get="{% url 'listings:search' %}" hx-target="#results" hx-push-url="true" hx-trigger="submit, keyup changed delay:400ms from:input[name=q]" hx-indicator="#search-skeleton">
+          {# Conserve les filtres actifs : sinon une frappe dans ce champ les efface. #}
+          {% hidden_filters exclude="q" %}
           <i class="bi bi-search"></i>
           <input type="search" name="q" value="{{ query }}" placeholder="Nounou, chauffeur, maçon..." autocomplete="off" enterkeyhint="search">
           <button class="btn btn-accent" type="submit">Rechercher</button>
         </form>
 
         <div class="filter-toolbar">
-          <button class="filter-pill" type="button" data-sheet-open="filter-sheet">
-            <i class="bi bi-sliders2"></i> Filtres
+          <button class="filter-pill {% if filter_count %}is-active{% endif %}" type="button" data-sheet-open="filter-sheet">
+            <i class="bi bi-sliders2"></i> Filtres{% if filter_count %} <span class="filter-count">{{ filter_count }}</span>{% endif %}
           </button>
-          <form method="get" hx-get="{% url 'listings:search' %}" hx-target="#results" hx-push-url="true" hx-indicator="#search-skeleton" class="d-inline">
-            <input type="hidden" name="q" value="{{ query }}">
-            <input type="hidden" name="type" value="{{ request.GET.type }}">
-            <input type="hidden" name="city" value="{{ request.GET.city }}">
+          <form method="get" action="{% url 'listings:search' %}" hx-get="{% url 'listings:search' %}" hx-target="#results" hx-push-url="true" hx-indicator="#search-skeleton" class="d-inline">
+            {% hidden_filters exclude="sort" %}
             <select class="filter-pill" name="sort" onchange="this.form.requestSubmit()" aria-label="Trier">
               <option value="recent" {% if request.GET.sort != 'salary' %}selected{% endif %}>Récentes</option>
               <option value="salary" {% if request.GET.sort == 'salary' %}selected{% endif %}>Rémunération</option>
             </select>
           </form>
+          {% if filter_count %}
+            <a class="filter-pill filter-reset" href="{% url 'listings:search' %}{% if query %}?q={{ query|urlencode }}{% endif %}">
+              <i class="bi bi-x-lg"></i> Effacer
+            </a>
+          {% endif %}
         </div>
 
         <div class="chip-row">
@@ -38,10 +45,6 @@
             <a class="chip {% if query == term %}is-active{% endif %}" href="{% url 'listings:search' %}?q={{ term|urlencode }}">{{ term }}</a>
           {% empty %}
             <a class="chip {% if not query %}is-active{% endif %}" href="{% url 'listings:search' %}">Toutes</a>
-            <a class="chip {% if query == 'Nounou' %}is-active{% endif %}" href="{% url 'listings:search' %}?q=Nounou">Nounou</a>
-            <a class="chip {% if query == 'Chauffeur' %}is-active{% endif %}" href="{% url 'listings:search' %}?q=Chauffeur">Chauffeur</a>
-            <a class="chip {% if query == 'Maçon' %}is-active{% endif %}" href="{% url 'listings:search' %}?q=Maçon">Maçon</a>
-            <a class="chip {% if query == 'Mission' %}is-active{% endif %}" href="{% url 'listings:search' %}?type=mission">Mission</a>
           {% endfor %}
         </div>
       </div>
@@ -75,13 +78,24 @@
   <div class="sheet-handle"></div>
   <h2 class="sheet-title">Filtres</h2>
   <form method="get" action="{% url 'listings:search' %}" class="stack-form" hx-get="{% url 'listings:search' %}" hx-target="#results" hx-push-url="true" hx-indicator="#search-skeleton">
-    <input type="hidden" name="q" value="{{ query }}">
-    <label for="filter-type">Type d'annonce</label>
+    {# Le tri et la recherche texte ne sont pas édités ici : on les reconduit. #}
+    {% hidden_filters exclude="type,city,city_name,province,duration,availability,salary_min" %}
+
+    <label>Type d'annonce</label>
     <div class="chip-choice-row">
       <label class="chip-choice"><input type="radio" name="type" value="" {% if not request.GET.type %}checked{% endif %}> Tous</label>
       <label class="chip-choice"><input type="radio" name="type" value="employment" {% if request.GET.type == 'employment' %}checked{% endif %}> Emploi</label>
       <label class="chip-choice"><input type="radio" name="type" value="mission" {% if request.GET.type == 'mission' %}checked{% endif %}> Mission</label>
     </div>
+
+    <label for="filter-province">Province</label>
+    <select class="form-control" id="filter-province" name="province">
+      <option value="">Toutes les provinces</option>
+      {% for province in provinces %}
+        <option value="{{ province.pk }}" {% if request.GET.province == province.pk|stringformat:"s" %}selected{% endif %}>{{ province.name }}</option>
+      {% endfor %}
+    </select>
+
     <label for="filter-city">Ville</label>
     <input class="form-control" id="filter-city" type="text" name="city_name" list="city-suggestions" value="{{ request.GET.city_name }}" placeholder="Ex. Libreville" autocomplete="off">
     <datalist id="city-suggestions">
@@ -89,7 +103,28 @@
         <option value="{{ city.name }}"></option>
       {% endfor %}
     </datalist>
+
+    <label for="filter-duration">Durée</label>
+    <select class="form-control" id="filter-duration" name="duration">
+      <option value="">Toutes les durées</option>
+      {% for value, label in duration_choices %}
+        <option value="{{ value }}" {% if request.GET.duration == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="filter-availability">Quand ?</label>
+    <select class="form-control" id="filter-availability" name="availability">
+      <option value="">Peu importe</option>
+      {% for value, label in availability_choices %}
+        <option value="{{ value }}" {% if request.GET.availability == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="filter-salary">Rémunération minimale (FCFA)</label>
+    <input class="form-control" id="filter-salary" type="number" name="salary_min" min="0" step="5000" value="{{ request.GET.salary_min }}" placeholder="Ex. 100000" inputmode="numeric">
+
     <button class="btn btn-accent w-100" type="submit" data-sheet-close>Appliquer</button>
+    <a class="btn btn-outline-navy w-100" href="{% url 'listings:search' %}{% if query %}?q={{ query|urlencode }}{% endif %}">Tout effacer</a>
   </form>
 </div>
 {% endblock %}

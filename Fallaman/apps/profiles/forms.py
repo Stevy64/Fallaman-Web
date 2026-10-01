@@ -1,5 +1,7 @@
 from django import forms
+from django.core.exceptions import ValidationError
 
+from apps.accounts.phone import normalize_phone
 from apps.core.uploads import validate_document, validate_image
 from apps.listings.location_utils import resolve_location, resolve_profession
 from apps.locations.models import City
@@ -118,6 +120,9 @@ class ProfileForm(forms.ModelForm):
             "avatar": forms.ClearableFileInput(attrs={"class": "form-control", "accept": "image/*"}),
         }
 
+    #: Champs sans lesquels le profil ne remplit pas son office.
+    REQUIRED_FIELDS = ("first_name", "last_name", "whatsapp_number")
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         instance = kwargs.get("instance") or getattr(self, "instance", None)
@@ -132,6 +137,16 @@ class ProfileForm(forms.ModelForm):
                 self.fields["profession_name"].initial = instance.primary_profession.name
         for field in self.fields.values():
             field.required = False
+        # Socle d'identité : sans ces trois-là, un profil n'est pas contactable.
+        for nom in self.REQUIRED_FIELDS:
+            self.fields[nom].required = True
+
+        # À défaut de numéro déjà enregistré, proposer celui du compte.
+        if instance and not instance.whatsapp_number:
+            user = getattr(instance, "user", None)
+            if user is not None:
+                self.fields["whatsapp_number"].initial = user.phone_number
+
         # Field order
         desired = [
             "first_name",
@@ -151,6 +166,13 @@ class ProfileForm(forms.ModelForm):
             "cv_file",
         ]
         self.order_fields(desired)
+
+    def clean_whatsapp_number(self):
+        """Normalise en E.164 : c'est ce format que wa.me attend."""
+        raw = (self.cleaned_data.get("whatsapp_number") or "").strip()
+        if not raw:
+            raise ValidationError("Indiquez le numéro sur lequel on peut vous joindre.")
+        return normalize_phone(raw)
 
     def clean_avatar(self):
         return validate_image(self.cleaned_data.get("avatar"), label="photo de profil")

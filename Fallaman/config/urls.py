@@ -6,6 +6,7 @@ from django.urls import include, path
 from django.views.generic import TemplateView
 
 from apps.accounts.forms import FallamanAdminAuthenticationForm
+from apps.core.views import service_worker
 from apps.listings.sitemaps import ListingSitemap
 
 admin.site.login_form = FallamanAdminAuthenticationForm
@@ -39,14 +40,7 @@ urlpatterns = [
         "robots.txt",
         TemplateView.as_view(template_name="robots.txt", content_type="text/plain"),
     ),
-    path(
-        "sw.js",
-        TemplateView.as_view(
-            template_name="pwa/sw.js",
-            content_type="application/javascript",
-        ),
-        name="service-worker",
-    ),
+    path("sw.js", service_worker, name="service-worker"),
 ]
 
 if settings.DEBUG:

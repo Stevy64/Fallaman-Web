@@ -1,0 +1,59 @@
+name: Deploy OVH
+
+# Déploiement automatique vers le VPS OVH (Docker Compose).
+# Secrets GitHub requis (Settings → Secrets and variables → Actions) :
+#   OVH_HOST          IP ou hostname SSH du VPS
+#   OVH_USER          utilisateur SSH (ex. ubuntu / debian)
+#   OVH_SSH_KEY       clé privée OpenSSH (sans passphrase idéalement)
+#   OVH_SSH_PORT      optionnel (défaut 22)
+#   OVH_DEPLOY_PATH   chemin du clone (ex. /var/www/fallaman)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "Fallaman/**"
+      - ".github/workflows/deploy.yml"
+
+concurrency:
+  group: deploy-ovh
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy fallaman.gabomazone.com
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    steps:
+      - name: Checkout (référence commit)
+        uses: actions/checkout@v4
+
+      - name: Déployer via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.OVH_HOST }}
+          username: ${{ secrets.OVH_USER }}
+          key: ${{ secrets.OVH_SSH_KEY }}
+          port: ${{ secrets.OVH_SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            DEPLOY_PATH="${{ secrets.OVH_DEPLOY_PATH }}"
+            if [ -z "$DEPLOY_PATH" ]; then
+              DEPLOY_PATH="/var/www/fallaman"
+            fi
+            cd "$DEPLOY_PATH"
+            git fetch --prune
+            git checkout "${{ github.ref_name }}"
+            git pull --ff-only origin "${{ github.ref_name }}"
+            cd Fallaman
+            if [ ! -f .env ]; then
+              echo "ERREUR: Fallaman/.env manquant sur le VPS"
+              exit 1
+            fi
+            bash deploy/update.sh
+            curl -fsS "http://127.0.0.1:${FALLAMAN_HTTP_PORT:-8080}/health/" >/dev/null
+            echo "Deploy OK — $(date -u +%Y-%m-%dT%H:%M:%SZ) — ${{ github.sha }}"

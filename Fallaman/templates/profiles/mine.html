@@ -1,25 +1,60 @@
 {% extends "base.html" %}
 {% load fallaman_tags %}
 {% block title %}Mon profil — Fallaman{% endblock %}
+{% block body_class %}page-profile{% endblock %}
 {% block content %}
 <section class="container-narrow py-4 page-enter">
-  <div class="page-shell">
+  <div class="profile-shell reveal">
     <div class="profile-hero">
       {% include "components/avatar.html" with profile=profile name=user.display_name size_class="avatar-xl" %}
-      <div>
-        <h1 class="h4 mb-1">Mon profil</h1>
-        <p class="mb-0 {% if user.phone_verified %}verified{% endif %}">
+      <div class="profile-hero-copy">
+        <p class="reco-kicker mb-1"><i class="bi bi-person-fill"></i> Mon espace</p>
+        <h1>{{ profile.display_name|default:user.display_name|default:"Mon profil" }}</h1>
+        <p class="mb-0 profile-status {% if user.phone_verified %}verified{% endif %}">
           {% if user.phone_verified %}<i class="bi bi-patch-check-fill"></i> Téléphone vérifié{% endif %}
-          {% if profile.is_complete %} · Profil complet{% endif %}
+          {% if profile.is_complete %} · Profil complet{% else %} · Profil à compléter{% endif %}
         </p>
         {% if profile.is_recommended %}
           <p class="boost-live-banner mt-2 mb-0">
             <i class="bi bi-rocket-takeoff-fill"></i>
-            Profil recommandé{% if profile.recommended_until %} jusqu'au {{ profile.recommended_until|date:"d/m/Y H:i" }}{% endif %}
+            Boost actif{% if profile.recommended_until %} jusqu'au {{ profile.recommended_until|date:"d/m/Y H:i" }}{% endif %}
           </p>
         {% endif %}
-        <p class="meta mb-0">Membre depuis {{ user.date_joined|date:"Y" }}</p>
+        <p class="meta mb-0 mt-1">Membre depuis {{ user.date_joined|date:"Y" }}</p>
       </div>
+    </div>
+
+    <div class="profile-actions">
+      <a class="profile-action-card is-boost" href="{% url 'recommendations:boost_profile' %}">
+        <span class="profile-action-icon" aria-hidden="true"><i class="bi bi-rocket-takeoff-fill"></i></span>
+        <span>
+          <strong>Boostez la visibilité</strong>
+          <small>Apparaissez en priorité auprès des pourvoyeurs</small>
+        </span>
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a class="profile-action-card" href="{% url 'recommendations:mine' %}">
+        <span class="profile-action-icon" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
+        <span>
+          <strong>Mes boosts</strong>
+          <small>Historique et durées actives</small>
+        </span>
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a class="profile-action-card" href="{% url 'listings:favorites' %}">
+        <span class="profile-action-icon" aria-hidden="true"><i class="bi bi-heart-fill"></i></span>
+        <span>
+          <strong>Annonces likées</strong>
+          <small>{% if favorite_ids %}{{ favorite_ids|length }} favori{{ favorite_ids|length|pluralize }}{% else %}Retrouvez vos coups de cœur{% endif %}</small>
+        </span>
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+      </a>
+    </div>
+  </div>
+
+  <div class="profile-shell reveal">
+    <div class="section-head mb-3">
+      <h2 class="section-title mb-0">Modifier mon profil</h2>
     </div>
     {% if profile.avatar %}
       <p class="meta mb-2">Photo actuelle affichée ci-dessus. Choisissez un fichier pour la remplacer.</p>
@@ -32,37 +67,36 @@
     </form>
   </div>
 
-  <div class="section-head">
+  <div class="section-head reveal">
     <h2 class="section-title mb-0">Mes annonces</h2>
     <button class="meta border-0 bg-transparent" type="button" data-sheet-open="publish-sheet">Publier »</button>
   </div>
   <div class="listing-stack mt-3">
     {% for listing in listings %}
-      <a class="listing-card d-block own-listing" href="{{ listing.get_absolute_url }}">
-        <h3>{{ listing.title }}</h3>
-        <p class="meta mb-0">{{ listing.get_status_display }} · {{ listing.location_label }}</p>
-      </a>
+      <article class="listing-card own-listing">
+        <a class="listing-card-hit" href="{{ listing.get_absolute_url }}" aria-label="Voir {{ listing.title }}"></a>
+        <div class="d-flex justify-content-between gap-2 align-items-start">
+          <h3>{{ listing.title }}</h3>
+          {% if listing.is_boosted %}<span class="tag is-boost"><i class="bi bi-rocket-takeoff-fill"></i> Boost</span>{% endif %}
+        </div>
+        <p class="meta mb-2">{{ listing.get_status_display }} · {{ listing.location_label }}</p>
+        {% if listing.status == "published" %}
+          <a class="profile-boost-link" href="{% url 'recommendations:boost_listing' listing.pk %}">
+            <i class="bi bi-rocket-takeoff"></i> Boostez la visibilité
+          </a>
+        {% endif %}
+      </article>
     {% empty %}
-      <div class="empty-state">
+      <div class="empty-state reveal">
         <p>Vous n'avez pas encore publié d'annonce.</p>
         <button class="btn btn-accent" type="button" data-sheet-open="publish-sheet">Publier</button>
       </div>
     {% endfor %}
   </div>
-  <p class="mt-4">
-    <a class="btn btn-accent w-100" href="{% url 'recommendations:boost_profile' %}">
-      <i class="bi bi-stars"></i> Demander à être recommandé
-    </a>
-  </p>
-  <p class="mt-2">
-    <a class="btn btn-outline-navy w-100" href="{% url 'recommendations:mine' %}">Mes recommandations</a>
-  </p>
-  <p class="mt-2">
-    <a class="btn btn-accent w-100" href="{% url 'listings:favorites' %}">
-      <i class="bi bi-heart-fill"></i> Annonces likées
-      {% if favorite_ids %} ({{ favorite_ids|length }}){% endif %}
-    </a>
-  </p>
-  <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="btn btn-outline-navy w-100 mt-2" type="submit">Se déconnecter</button></form>
+
+  <form method="post" action="{% url 'accounts:logout' %}" class="mt-4 reveal">
+    {% csrf_token %}
+    <button class="btn btn-outline-navy w-100" type="submit">Se déconnecter</button>
+  </form>
 </section>
 {% endblock %}

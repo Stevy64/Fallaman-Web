@@ -1,3 +1,14 @@
+"""Journal d'activité, alimenté par le middleware.
+
+``ActivityLog`` conserve les mutations, les erreurs HTTP et les requêtes lentes
+— pas la navigation ordinaire, sous peine de noyer la table. La sélection est
+faite dans ``apps.core.middleware.ActivityLogMiddleware``.
+
+La rétention est bornée par ``ACTIVITY_LOG_RETENTION_DAYS`` (30 jours),
+appliquée par la tâche ``cleanup_activity_logs``. Consultable depuis le tableau
+de bord.
+"""
+
 from django.conf import settings
 from django.db import models
 

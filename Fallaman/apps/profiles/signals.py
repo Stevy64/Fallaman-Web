@@ -11,7 +11,12 @@ User = get_user_model()
 @receiver(post_save, sender=User)
 def create_profile(sender, instance, created, **kwargs):
     if created:
-        Profile.objects.get_or_create(user=instance)
+        # Le numéro du compte sert de WhatsApp par défaut : c'est celui que la
+        # personne vient de saisir, inutile de le lui redemander.
+        Profile.objects.get_or_create(
+            user=instance,
+            defaults={"whatsapp_number": instance.phone_number or ""},
+        )
         if not instance.is_staff:
             from apps.notifications.models import Notification
             from apps.notifications.services import notify_staff

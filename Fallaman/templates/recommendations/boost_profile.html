@@ -1,50 +1,99 @@
 {% extends "base.html" %}
 {% load fallaman_tags %}
-{% block title %}Être recommandé — Fallaman{% endblock %}
+{% block title %}Boostez votre profil — Fallaman{% endblock %}
+{% block body_class %}page-boost{% endblock %}
 {% block content %}
-<section class="container-narrow py-4 page-enter">
-  <div class="page-shell reco-shell">
-    <a class="meta d-inline-flex align-items-center gap-1 mb-3" href="{% url 'profiles:mine' %}">
+<section class="container-narrow py-4 boost-page">
+  <div class="boost-hero reveal">
+    <a class="categories-back" href="{% url 'profiles:mine' %}">
       <i class="bi bi-arrow-left"></i> Mon profil
     </a>
-    <p class="reco-kicker"><i class="bi bi-person-bounding-box"></i> Demandeurs d'emploi</p>
-    <h1 class="h4 mb-2">Demander à être recommandé</h1>
-    <p class="meta mb-3">
-      Optionnel : les pourvoyeurs d'offres correspondant à votre métier / ville sont notifiés,
-      et votre profil apparaît en priorité sur leurs annonces.
-    </p>
-
-    <div class="reco-target-card mb-3">
-      <strong>{{ profile.display_name|default:user.display_name }}</strong>
-      <span class="meta">
-        {% if profile.primary_profession %}{{ profile.primary_profession.name }}{% else %}{{ profile.looking_for|default:"Profil" }}{% endif %}
-        {% if profile.city %} · {{ profile.city.name }}{% endif %}
-      </span>
-      {% if is_recommended %}
-        <span class="boost-badge mt-2"><i class="bi bi-stars"></i> Active jusqu'au {{ recommended_until|date:"d/m/Y H:i" }}</span>
-      {% endif %}
-    </div>
-
-    <form method="post" class="reco-quote-form">
-      {% csrf_token %}
-      <fieldset>
-        <legend class="section-title">Durée de la recommandation</legend>
-        <div class="reco-quote-grid">
-          {% for q in quotes %}
-            <label class="reco-quote-card">
-              <input type="radio" name="duration_days" value="{{ q.duration_days }}" {% if forloop.first %}checked{% endif %} required>
-              <span class="reco-quote-days">{{ q.label }}</span>
-              <span class="reco-quote-amount">{{ q.amount|fcfa }}</span>
-              <span class="meta">{{ q.daily_rate|fcfa }}/jour{% if q.discount_percent %} · −{{ q.discount_percent }} %{% endif %}</span>
-            </label>
-          {% endfor %}
-        </div>
-      </fieldset>
-      <p class="meta mt-3 mb-3">
-        Paiement simple via SingPay. Le montant dépend uniquement de la durée choisie.
+    <div class="boost-hero-banner">
+      <span class="boost-hero-orb" aria-hidden="true"></span>
+      <p class="reco-kicker"><i class="bi bi-rocket-takeoff-fill"></i> Boost profil</p>
+      <h1>Boostez la visibilité de votre profil</h1>
+      <p class="lead mb-0">
+        Apparaissez en priorité auprès des pourvoyeurs d'offres de votre métier et de votre ville.
+        Plus de contacts, plus rapidement.
       </p>
-      <button class="btn btn-accent w-100" type="submit">Continuer vers le paiement</button>
-    </form>
+    </div>
+  </div>
+
+  <div class="boost-benefits reveal">
+    <article class="boost-benefit">
+      <span class="boost-benefit-icon" aria-hidden="true"><i class="bi bi-eye-fill"></i></span>
+      <div>
+        <strong>Visibilité prioritaire</strong>
+        <span>Votre profil remonte en tête des suggestions.</span>
+      </div>
+    </article>
+    <article class="boost-benefit">
+      <span class="boost-benefit-icon" aria-hidden="true"><i class="bi bi-bell-fill"></i></span>
+      <div>
+        <strong>Alertes ciblées</strong>
+        <span>Les annonces correspondantes vous mettent en avant.</span>
+      </div>
+    </article>
+    <article class="boost-benefit">
+      <span class="boost-benefit-icon" aria-hidden="true"><i class="bi bi-lightning-charge-fill"></i></span>
+      <div>
+        <strong>Activation immédiate</strong>
+        <span>Dès le paiement SingPay confirmé, le boost démarre.</span>
+      </div>
+    </article>
+  </div>
+
+  <div class="reco-target-card boost-target reveal">
+    <span class="boost-target-label">Profil à booster</span>
+    <strong>{{ profile.display_name|default:user.display_name }}</strong>
+    <span class="meta">
+      {% if profile.primary_profession %}{{ profile.primary_profession.name }}{% else %}{{ profile.looking_for|default:"Profil" }}{% endif %}
+      {% if profile.city %} · {{ profile.city.name }}{% endif %}
+    </span>
+    {% if is_recommended %}
+      <span class="boost-badge mt-2"><i class="bi bi-rocket-takeoff-fill"></i> Boost actif jusqu'au {{ recommended_until|date:"d/m/Y H:i" }}</span>
+    {% endif %}
+  </div>
+
+  <form method="post" class="reco-quote-form boost-form" id="boost-form">
+    {% csrf_token %}
+    <fieldset class="reveal">
+      <legend class="section-title">Choisissez la durée du boost</legend>
+      <div class="reco-quote-grid">
+        {% for q in quotes %}
+          <label class="reco-quote-card {% if forloop.first %}is-popular{% endif %}">
+            <input type="radio" name="duration_days" value="{{ q.duration_days }}" {% if forloop.first %}checked{% endif %} required>
+            {% if q.discount_percent %}
+              <span class="reco-quote-save">−{{ q.discount_percent }} %</span>
+            {% elif forloop.first %}
+              <span class="reco-quote-save is-soft">Populaire</span>
+            {% endif %}
+            <span class="reco-quote-icon" aria-hidden="true">
+              {% if q.duration_days <= 1 %}<i class="bi bi-lightning-charge-fill"></i>
+              {% elif q.duration_days <= 3 %}<i class="bi bi-fire"></i>
+              {% elif q.duration_days <= 7 %}<i class="bi bi-rocket-takeoff-fill"></i>
+              {% else %}<i class="bi bi-trophy-fill"></i>{% endif %}
+            </span>
+            <span class="reco-quote-days">{{ q.label }}</span>
+            <span class="reco-quote-amount">{{ q.amount|fcfa }}</span>
+            <span class="meta">{{ q.daily_rate|fcfa }}/jour</span>
+          </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    <p class="boost-trust meta reveal">
+      <i class="bi bi-shield-check"></i>
+      Paiement sécurisé via SingPay · Airtel Money & Moov Money
+    </p>
+  </form>
+
+  {# Hors de .reveal / transform pour que position:fixed reste viewport-fixed #}
+  <div class="boost-cta-spacer" aria-hidden="true"></div>
+  <div class="boost-cta-bar">
+    <button class="btn btn-boost-pay w-100" type="submit" form="boost-form">
+      <i class="bi bi-lock-fill" aria-hidden="true"></i>
+      Continuer vers le paiement
+    </button>
   </div>
 </section>
 {% endblock %}

@@ -53,9 +53,16 @@ if _otp_provider == "whatsapp" and not (
         "OTP_PROVIDER=whatsapp exige WHATSAPP_PHONE_NUMBER_ID et WHATSAPP_ACCESS_TOKEN."
     )
 
-# Le paiement simulé crédite les recommandations sans encaisser.
-if env.bool("SINGPAY_MOCK", default=False):
-    raise ImproperlyConfigured("SINGPAY_MOCK ne doit jamais être activé en production.")
+if not (
+    env("SINGPAY_API_KEY", default="")
+    and env("SINGPAY_API_SECRET", default="")
+    and env("SINGPAY_MERCHANT_ID", default="")
+    and env("SINGPAY_DISBURSEMENT_ID", default="")
+):
+    raise ImproperlyConfigured(
+        "Le paiement SingPay exige SINGPAY_API_KEY, SINGPAY_API_SECRET, "
+        "SINGPAY_MERCHANT_ID et SINGPAY_DISBURSEMENT_ID."
+    )
 
 if env("DEMO_STAFF_PASSWORD", default=""):
     raise ImproperlyConfigured(

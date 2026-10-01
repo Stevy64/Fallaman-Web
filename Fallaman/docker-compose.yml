@@ -1,23 +1,51 @@
 # ════════════════════════════════════════════
-# FALLAMAN — Architecture conteneurs
-# Services : web, db, redis, celery, celery-beat
-# Usage prod : docker compose up -d --build
+# FALLAMAN — Production (micro-services Docker)
+# Cible : OVH Cloud / VPS — fallaman.gabomazone.com
+#
+# Services :
+#   nginx        reverse-proxy (80) → web + static/media
+#   web          Django / Gunicorn
+#   celery       worker asynchrone
+#   celery-beat  planification (expiration, maintenance…)
+#   db           PostgreSQL 16
+#   redis        broker / cache
+#
+# Usage :
+#   cp .env.production.example .env   # puis renseigner
+#   docker compose up -d --build
+#   make health
 # ════════════════════════════════════════════
 
 x-django-env: &django-env
   DJANGO_SETTINGS_MODULE: config.settings.production
-  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me-in-production}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY requis}
   DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
-  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,web}
-  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
-  DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-false}
-  DATABASE_URL: postgres://fallaman:${POSTGRES_PASSWORD:-fallaman}@db:5432/fallaman
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-fallaman.gabomazone.com}
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-https://fallaman.gabomazone.com}
+  DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-true}
+  TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
+  DATABASE_URL: postgres://fallaman:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}@db:5432/fallaman
   REDIS_URL: redis://redis:6379/0
   CELERY_BROKER_URL: redis://redis:6379/1
   CELERY_RESULT_BACKEND: redis://redis:6379/2
   CELERY_TASK_ALWAYS_EAGER: "false"
-  OTP_PROVIDER: ${OTP_PROVIDER:-console}
-  OTP_DEV_CODE: ${OTP_DEV_CODE:-123456}
+  OTP_PROVIDER: ${OTP_PROVIDER:-email}
+  EMAIL_HOST: ${EMAIL_HOST:-}
+  EMAIL_PORT: ${EMAIL_PORT:-587}
+  EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+  EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+  EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
+  DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-Fallaman <no-reply@gabomazone.com>}
+  SINGPAY_API_KEY: ${SINGPAY_API_KEY:-}
+  SINGPAY_API_SECRET: ${SINGPAY_API_SECRET:-}
+  SINGPAY_MERCHANT_ID: ${SINGPAY_MERCHANT_ID:-}
+  SINGPAY_DISBURSEMENT_ID: ${SINGPAY_DISBURSEMENT_ID:-}
+  SINGPAY_ENVIRONMENT: ${SINGPAY_ENVIRONMENT:-production}
+  SINGPAY_WEBHOOK_SECRET: ${SINGPAY_WEBHOOK_SECRET:-}
+  ANDROID_APP_URL: ${ANDROID_APP_URL:-#}
+  IOS_APP_URL: ${IOS_APP_URL:-#}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
 
 services:
 
@@ -28,11 +56,10 @@ services:
     environment:
       POSTGRES_DB: fallaman
       POSTGRES_USER: fallaman
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fallaman}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # Pas d'exposition publique : seulement le réseau Docker.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fallaman"]
       interval: 10s
@@ -45,11 +72,9 @@ services:
     image: redis:7-alpine
     container_name: fallaman-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -63,19 +88,24 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runner
+    image: fallaman-web:${FALLAMAN_IMAGE_TAG:-latest}
     container_name: fallaman-web
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       <<: *django-env
       RUN_MIGRATIONS: "true"
-      SEED_DEMO: ${SEED_DEMO:-true}
+      # Jamais de comptes démo en production.
+      SEED_DEMO: "false"
       COLLECTSTATIC: "true"
     volumes:
       - media_files:/app/media
       - static_files:/app/staticfiles
       - ./logs:/app/logs
-    ports:
-      - "8000:8000"
+    # Accès interne uniquement ; nginx expose 80/443.
+    expose:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
@@ -86,7 +116,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 50s
     networks:
       - fallaman-net
 
@@ -95,11 +125,16 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runner
+    image: fallaman-web:${FALLAMAN_IMAGE_TAG:-latest}
     container_name: fallaman-celery
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       <<: *django-env
       RUN_MIGRATIONS: "false"
+      SEED_DEMO: "false"
+      COLLECTSTATIC: "false"
     volumes:
       - media_files:/app/media
       - ./logs:/app/logs
@@ -109,21 +144,26 @@ services:
       redis:
         condition: service_healthy
       web:
-        condition: service_started
+        condition: service_healthy
     networks:
       - fallaman-net
-    command: celery -A config worker --loglevel=info --concurrency=2
+    command: celery -A config worker --loglevel=info --concurrency=${CELERY_CONCURRENCY:-2}
 
   celery-beat:
     build:
       context: .
       dockerfile: Dockerfile
       target: runner
+    image: fallaman-web:${FALLAMAN_IMAGE_TAG:-latest}
     container_name: fallaman-celery-beat
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       <<: *django-env
       RUN_MIGRATIONS: "false"
+      SEED_DEMO: "false"
+      COLLECTSTATIC: "false"
     volumes:
       - ./logs:/app/logs
     depends_on:
@@ -132,10 +172,31 @@ services:
       redis:
         condition: service_healthy
       web:
-        condition: service_started
+        condition: service_healthy
     networks:
       - fallaman-net
     command: celery -A config beat --loglevel=info --schedule /tmp/celerybeat-schedule
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: fallaman-nginx
+    restart: unless-stopped
+    ports:
+      - "${FALLAMAN_HTTP_PORT:-80}:80"
+    volumes:
+      - ./deploy/nginx-docker.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_files:/var/www/static:ro
+      - media_files:/var/www/media:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - fallaman-net
 
 volumes:
   postgres_data:

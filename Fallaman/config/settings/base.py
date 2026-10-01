@@ -247,6 +247,7 @@ SINGPAY_MERCHANT_ID = env("SINGPAY_MERCHANT_ID", default="")
 SINGPAY_DISBURSEMENT_ID = env("SINGPAY_DISBURSEMENT_ID", default="")
 SINGPAY_ENVIRONMENT = env("SINGPAY_ENVIRONMENT", default="sandbox")
 SINGPAY_BASE_URL = env("SINGPAY_BASE_URL", default="")
+SINGPAY_LOGO_URL = env("SINGPAY_LOGO_URL", default="")
 # Secret de signature des webhooks. À défaut, l'API secret sert de secret HMAC.
 SINGPAY_WEBHOOK_SECRET = env("SINGPAY_WEBHOOK_SECRET", default="")
 # Fenêtre anti-rejeu sur l'en-tête X-Timestamp.
@@ -255,8 +256,6 @@ SINGPAY_WEBHOOK_TOLERANCE_SECONDS = env.int("SINGPAY_WEBHOOK_TOLERANCE_SECONDS",
 SINGPAY_WEBHOOK_REQUIRE_FRESH_TIMESTAMP = env.bool(
     "SINGPAY_WEBHOOK_REQUIRE_FRESH_TIMESTAMP", default=False
 )
-# Paiement simulé : crédite sans encaisser. Jamais activable en production.
-SINGPAY_MOCK = env.bool("SINGPAY_MOCK", default=False)
 
 # Compte équipe de démonstration (développement uniquement).
 DEMO_STAFF_PHONE = env("DEMO_STAFF_PHONE", default="+24106111111")

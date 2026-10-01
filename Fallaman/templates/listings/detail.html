@@ -55,7 +55,7 @@
       <div class="detail-header">
         <div class="tag-row justify-content-center mb-2">
           {% if listing.is_boosted %}
-            <span class="tag is-boost"><i class="bi bi-rocket-takeoff-fill"></i> Recommandée{% if listing.boosted_until %} · jusqu'au {{ listing.boosted_until|date:"d/m/Y" }}{% endif %}</span>
+            <span class="tag is-boost"><i class="bi bi-rocket-takeoff-fill"></i> Boostée{% if listing.boosted_until %} · jusqu'au {{ listing.boosted_until|date:"d/m/Y" }}{% endif %}</span>
           {% endif %}
           <span class="tag {% if listing.listing_type == 'mission' %}is-mission{% else %}is-type{% endif %}">
             {% if listing.listing_type == 'mission' %}Mission{% else %}Emploi{% endif %}
@@ -313,7 +313,7 @@
   <div class="sheet-actions">
     <a class="sheet-option" href="{% url 'recommendations:boost_listing' listing.pk %}">
       <i class="bi bi-rocket-takeoff-fill"></i>
-      <span>Mettre en avant<small>Recommandation payante selon la durée</small></span>
+      <span>Boostez la visibilité<small>Placez votre annonce en priorité</small></span>
     </a>
     <form method="post" action="{% url 'listings:renew' listing.pk %}">
       {% csrf_token %}

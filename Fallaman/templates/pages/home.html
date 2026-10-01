@@ -11,8 +11,8 @@
       <div class="hero-store" role="group" aria-label="Télécharger l'application Fallaman">
         <a
           class="hero-store-btn"
-          href="{{ android_app_url }}"
-          {% if android_app_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+          href="{% if android_app_ready %}{{ android_app_url }}{% else %}#{% endif %}"
+          {% if android_app_ready %}target="_blank" rel="noopener noreferrer"{% else %}data-app-store-pending="android"{% endif %}
         >
           <i class="bi bi-android2" aria-hidden="true"></i>
           <span class="hero-store-copy">
@@ -22,8 +22,8 @@
         </a>
         <a
           class="hero-store-btn"
-          href="{{ ios_app_url }}"
-          {% if ios_app_external %}target="_blank" rel="noopener noreferrer"{% endif %}
+          href="{% if ios_app_ready %}{{ ios_app_url }}{% else %}#{% endif %}"
+          {% if ios_app_ready %}target="_blank" rel="noopener noreferrer"{% else %}data-app-store-pending="ios"{% endif %}
         >
           <i class="bi bi-apple" aria-hidden="true"></i>
           <span class="hero-store-copy">
@@ -99,7 +99,7 @@
     <div class="category-grid reveal">
       {% for category in categories %}
         <a class="category-tile" href="{% url 'taxonomy:detail' category.slug %}">
-          <i class="bi bi-grid"></i> {{ category.name }}
+          <i class="bi {{ category.icon|category_icon }}"></i> {{ category.name }}
         </a>
       {% endfor %}
     </div>

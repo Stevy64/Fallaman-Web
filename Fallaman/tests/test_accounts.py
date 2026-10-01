@@ -285,3 +285,94 @@ def test_parcours_complet_en_mode_console(client):
         {"password1": MOT_DE_PASSE, "password2": MOT_DE_PASSE},
     )
     assert "_auth_user_id" in client.session
+
+
+# ── Où atterrit-on après connexion ? ────────────────────────────────────
+
+
+@pytest.mark.django_db
+@override_settings(**EMAIL_ACTIF)
+def test_premiere_connexion_emmene_vers_le_profil(client):
+    """Un profil vide ne sert à personne : on l'ouvre tout de suite."""
+    client.post(
+        reverse("accounts:activate"),
+        {"phone_number": "06200080", "email": "arrivee@exemple.com"},
+    )
+    client.post(reverse("accounts:verify"), {"code": code_du_dernier_mail()})
+    response = client.post(
+        reverse("accounts:set_password"),
+        {"password1": MOT_DE_PASSE, "password2": MOT_DE_PASSE},
+    )
+    assert response.status_code == 302
+    assert response["Location"] == reverse("profiles:mine")
+
+
+@pytest.mark.django_db
+@override_settings(**EMAIL_ACTIF)
+def test_message_daccueil_a_la_premiere_connexion(client):
+    response = activer(client, "06200081", "accueil@exemple.com")
+    contenu = response.content.decode()
+    assert "Bienvenue sur Fallaman" in contenu
+    assert "Complétez votre profil" in contenu
+
+
+@pytest.mark.django_db
+@override_settings(**EMAIL_ACTIF)
+def test_connexion_courante_atterrit_sur_laccueil(client):
+    """Et non sur les favoris : le bouton de la navbar forçait next=/favoris/."""
+    activer(client, "06200082", "retour@exemple.com")
+    client.logout()
+
+    response = client.post(
+        reverse("accounts:login"),
+        {"phone_number": "06200082", "password": MOT_DE_PASSE},
+    )
+    assert response.status_code == 302
+    assert response["Location"] == reverse("core:home")
+
+
+@pytest.mark.django_db
+@override_settings(**EMAIL_ACTIF)
+def test_connexion_courante_respecte_un_next_legitime(client):
+    """Cliquer sur une annonce en étant déconnecté doit y ramener après login."""
+    activer(client, "06200083", "suite@exemple.com")
+    client.logout()
+
+    response = client.post(
+        reverse("accounts:login"),
+        {
+            "phone_number": "06200083",
+            "password": MOT_DE_PASSE,
+            "next": reverse("listings:favorites"),
+        },
+    )
+    assert response.status_code == 302
+    assert response["Location"] == reverse("listings:favorites")
+
+
+@pytest.mark.django_db
+@override_settings(**EMAIL_ACTIF)
+def test_reinitialisation_ne_renvoie_pas_au_profil_si_deja_complet(client):
+    """Un membre installé qui change son mot de passe n'a rien à recompléter."""
+    activer(client, "06200084", "installe@exemple.com")
+    user = User.objects.get(phone_number="+24106200084")
+    profile = user.profile
+    profile.display_name = "Membre Installé"
+    profile.bio = "Déjà renseigné."
+    from apps.locations.models import City, Province
+
+    province = Province.objects.create(name="Estuaire")
+    profile.city = City.objects.create(province=province, name="Libreville")
+    profile.save()
+    assert profile.is_complete
+    client.logout()
+    mail.outbox.clear()
+
+    client.post(reverse("accounts:activate"), {"phone_number": "06200084"})
+    client.post(reverse("accounts:verify"), {"code": code_du_dernier_mail()})
+    response = client.post(
+        reverse("accounts:set_password"),
+        {"password1": "AutreMotDePasse2026", "password2": "AutreMotDePasse2026"},
+    )
+    assert response.status_code == 302
+    assert response["Location"] == reverse("core:home")

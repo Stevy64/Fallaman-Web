@@ -1,8 +1,10 @@
-"""Tests recommandations + pricing + activation mock."""
+"""Tests recommandations + pricing + activation après paiement."""
 
 from datetime import timedelta
+from unittest import mock
 
 import pytest
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -10,6 +12,7 @@ from apps.listings.models import Listing
 from apps.listings.services import recent_listings
 from apps.payments.models import PaymentTransaction
 from apps.payments.services.checkout import apply_payment_success, create_payment
+from apps.payments.services.singpay import SingPayService
 from apps.profiles.models import Profile
 from apps.recommendations.models import RecommendationPurchase
 from apps.recommendations.pricing import quote, quote_catalog
@@ -55,7 +58,12 @@ def test_boosted_listing_ranks_first(user, db):
 
 
 @pytest.mark.django_db
-def test_activate_listing_boost_via_mock_payment(user, rf):
+@override_settings(
+    SINGPAY_API_KEY="cle",
+    SINGPAY_API_SECRET="secret",
+    SINGPAY_MERCHANT_ID="wallet",
+)
+def test_activate_listing_boost_via_payment(user, rf):
     listing = Listing.objects.create(
         author=user,
         listing_type=Listing.Type.EMPLOYMENT,
@@ -75,18 +83,24 @@ def test_activate_listing_boost_via_mock_payment(user, rf):
     request.user = user
     # Absolute URI helper
     request.META["HTTP_HOST"] = "testserver"
-    tx, url = create_payment(
-        request=request,
-        user=user,
-        purpose=PaymentTransaction.Purpose.LISTING_BOOST,
-        amount=purchase.amount,
-        description="test",
-        metadata={"purchase_id": purchase.pk, "listing_id": listing.pk},
-    )
+    init = {
+        "payment_url": "https://gateway.singpay.ga/pay/listing-boost",
+        "transaction_id": "tx-listing-1",
+        "reference": "REF-FLM-LISTING",
+    }
+    with mock.patch.object(SingPayService, "init_payment", return_value=(True, init)):
+        tx, url = create_payment(
+            request=request,
+            user=user,
+            purpose=PaymentTransaction.Purpose.LISTING_BOOST,
+            amount=purchase.amount,
+            description="test",
+            metadata={"purchase_id": purchase.pk, "listing_id": listing.pk},
+        )
     purchase.payment = tx
     purchase.save(update_fields=["payment"])
-    assert "simulation" in url
-    apply_payment_success(tx, provider_transaction_id="MOCK-1")
+    assert url == init["payment_url"]
+    apply_payment_success(tx, provider_transaction_id="tx-listing-1")
     listing.refresh_from_db()
     purchase.refresh_from_db()
     assert purchase.status == RecommendationPurchase.Status.ACTIVE
@@ -108,7 +122,7 @@ def test_boost_listing_page_requires_owner(client, user):
     client.force_login(user)
     response = client.get(reverse("recommendations:boost_listing", kwargs={"pk": listing.pk}))
     assert response.status_code == 200
-    assert b"Mettre en avant" in response.content
+    assert b"Boostez la visibilit" in response.content
 
 
 @pytest.mark.django_db

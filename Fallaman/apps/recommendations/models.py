@@ -1,3 +1,17 @@
+"""Recommandations payantes : mise en avant d'une annonce ou d'un profil.
+
+``RecommendationPurchase`` relie un paiement à la prestation vendue. Le cycle
+est : ``PENDING`` à la création → ``ACTIVE`` une fois le paiement confirmé
+(``services.activate_purchase``) → ``EXPIRED`` par la tâche périodique.
+
+L'activation est **cumulative** : acheter alors qu'une mise en avant court
+encore prolonge à partir de son échéance, sans perdre le temps déjà payé.
+
+``CandidateIntroduction`` est l'autre versant : un profil recommandé est proposé
+à un pourvoyeur. La discussion n'est ouverte qu'après acceptation explicite
+(``can_contact``) — un candidat payant ne peut pas écrire d'office.
+"""
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone

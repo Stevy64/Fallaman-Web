@@ -31,7 +31,7 @@
           {% include "components/avatar.html" with profile=user.profile name=user.display_name %}
         </a>
       {% else %}
-        <a class="icon-btn" href="{% url 'accounts:login' %}?next={% url 'listings:favorites' %}" aria-label="Connexion">
+        <a class="icon-btn" href="{% url 'accounts:login' %}" aria-label="Se connecter">
           <i class="bi bi-person"></i>
         </a>
       {% endif %}

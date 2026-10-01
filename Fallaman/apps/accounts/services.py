@@ -148,7 +148,13 @@ def verify_activation_code(phone_number: str, code: str) -> None:
 
 
 def complete_activation(request, phone_number: str, email: str, password: str):
-    """Crée ou met à jour le compte, pose le mot de passe, puis connecte."""
+    """
+    Crée ou met à jour le compte, pose le mot de passe, puis connecte.
+
+    Renvoie ``(user, created)`` : l'appelant a besoin de distinguer une
+    première connexion d'une simple réinitialisation de mot de passe pour
+    choisir où emmener la personne ensuite.
+    """
     phone = normalize_phone(phone_number)
 
     with transaction.atomic():
@@ -174,7 +180,7 @@ def complete_activation(request, phone_number: str, email: str, password: str):
 
     login(request, user, backend="apps.accounts.backends.PhoneModelBackend")
     logger.info("Compte activé (created=%s).", created)
-    return user
+    return user, created
 
 
 # ── Connexion courante ──────────────────────────────────────────────────

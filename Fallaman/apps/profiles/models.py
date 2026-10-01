@@ -1,3 +1,17 @@
+"""Profil public d'un membre.
+
+Créé automatiquement à l'inscription (``signals.create_profile``), avec le
+numéro du compte repris comme WhatsApp par défaut.
+
+``is_complete`` conditionne l'accès à la recommandation payante : un profil sans
+nom, sans ville et sans métier ni présentation n'a rien à mettre en avant.
+
+``recommended_until`` et ``recommend_score`` portent la recommandation payante,
+alimentés par apps.recommendations. ``show_whatsapp`` pilote la visibilité du
+numéro : ``apps.accounts.phone.contact_whatsapp_url()`` renvoie une chaîne vide
+quand il est faux, ce qui masque le bouton partout.
+"""
+
 from django.conf import settings
 from django.db import models
 

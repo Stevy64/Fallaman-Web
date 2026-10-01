@@ -1,5 +1,8 @@
 """
-Fichier WSGI pour PythonAnywhere.
+Fichier WSGI pour PythonAnywhere (staging / historique).
+
+Production officielle : OVH Cloud — voir docs/DEPLOIEMENT_OVH.md
+(domaine fallaman.gabomazone.com, stack Docker Compose).
 
 À recopier dans l'éditeur WSGI de l'onglet « Web » de PythonAnywhere
 (/var/www/<votrecompte>_pythonanywhere_com_wsgi.py), en remplaçant

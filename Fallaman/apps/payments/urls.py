@@ -7,5 +7,4 @@ app_name = "payments"
 urlpatterns = [
     path("paiements/singpay/callback/", views.singpay_callback, name="callback"),
     path("paiements/retour/<uuid:public_id>/", views.payment_return, name="return"),
-    path("paiements/simulation/<uuid:public_id>/", views.mock_checkout, name="mock_checkout"),
 ]

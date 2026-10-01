@@ -1,0 +1,158 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: Fallaman
+
+jobs:
+  test:
+    name: Tests & contrôles
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DJANGO_SECRET_KEY: ci-test-secret-key-not-for-production-use-please-rotate
+      DJANGO_DEBUG: "true"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+      DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1
+      CELERY_TASK_ALWAYS_EAGER: "true"
+      OTP_PROVIDER: console
+      OTP_DEV_CODE: "123456"
+      DEV_CONVENIENCES: "true"
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: Fallaman/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile sources
+        run: python -m compileall -q apps config manage.py
+
+      - name: Validate migrations
+        run: |
+          python manage.py makemigrations --check --dry-run
+          python manage.py migrate --noinput
+
+      - name: Collect static files
+        run: python manage.py collectstatic --noinput --clear
+
+      - name: Run pytest
+        run: python -m pytest --tb=short -q
+
+  docker-build:
+    name: Build image production
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: Fallaman
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build runner image
+        uses: docker/build-push-action@v6
+        with:
+          context: Fallaman
+          file: Fallaman/Dockerfile
+          target: runner
+          push: false
+          tags: fallaman-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  ovh-smoke:
+    name: Smoke config OVH (fallaman.gabomazone.com)
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: Fallaman
+
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DJANGO_SECRET_KEY: ovh-smoke-secret-key-not-for-production-use-please-rotate-xx
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: fallaman.gabomazone.com
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://fallaman.gabomazone.com
+      DJANGO_SECURE_SSL_REDIRECT: "true"
+      TRUST_PROXY_HEADERS: "true"
+      OTP_PROVIDER: email
+      EMAIL_HOST: smtp.example.com
+      EMAIL_HOST_USER: ci@example.com
+      EMAIL_HOST_PASSWORD: ci-password
+      DEFAULT_FROM_EMAIL: Fallaman <no-reply@gabomazone.com>
+      SINGPAY_API_KEY: smoke-key
+      SINGPAY_API_SECRET: smoke-secret
+      SINGPAY_MERCHANT_ID: smoke-merchant
+      SINGPAY_DISBURSEMENT_ID: smoke-disbursement
+      SINGPAY_ENVIRONMENT: production
+      REDIS_URL: ""
+      CELERY_BROKER_URL: ""
+      DATABASE_URL: sqlite:///ci-ovh-smoke.sqlite3
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: Fallaman/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Prod checks for OVH host
+        run: |
+          python manage.py check --deploy
+          python manage.py migrate --noinput
+          python manage.py createcachetable
+          python manage.py collectstatic --noinput
+          python - <<'PY'
+          import os
+          os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.production")
+          import django
+          django.setup()
+          from django.conf import settings
+          assert settings.DEBUG is False
+          assert "fallaman.gabomazone.com" in settings.ALLOWED_HOSTS
+          assert any("fallaman.gabomazone.com" in o for o in settings.CSRF_TRUSTED_ORIGINS)
+          assert settings.SECURE_PROXY_SSL_HEADER == ("HTTP_X_FORWARDED_PROTO", "https")
+          assert settings.DEV_CONVENIENCES is False
+          print("OVH / fallaman.gabomazone.com smoke OK")
+          PY

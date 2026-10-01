@@ -1,13 +1,18 @@
 {
+  "id": "/",
   "name": "Fallaman",
   "short_name": "Fallaman",
   "description": "Trouvez quelqu'un. Trouvez du travail.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait-primary",
   "background_color": "#F8F8FB",
   "theme_color": "#FE724C",
   "lang": "fr",
+  "dir": "ltr",
+  "categories": ["lifestyle", "social"],
   "icons": [
     {
       "src": "/static/icons/icon-192.png",
@@ -19,7 +24,13 @@
       "src": "/static/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

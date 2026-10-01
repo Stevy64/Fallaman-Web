@@ -1,6 +1,5 @@
-const CACHE = "fallaman-shell-v4";
+const CACHE = "fallaman-shell-v6";
 const PRECACHE = [
-  "/",
   "/hors-ligne/",
   "/static/css/fallaman.css",
   "/static/js/app.js",
@@ -8,14 +7,18 @@ const PRECACHE = [
   "/static/vendor/bootstrap-icons.min.css",
   "/static/vendor/bootstrap.bundle.min.js",
   "/static/vendor/htmx.min.js",
+  "/static/icons/icon-192.png",
+  "/static/icons/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE).then(async (cache) => {
+      await Promise.all(
+        PRECACHE.map((url) => cache.add(url).catch(() => undefined))
+      );
+      return self.skipWaiting();
+    })
   );
 });
 
@@ -33,8 +36,8 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
 
-  // Never cache or intercept uploaded media (avatars, listing photos).
   if (url.pathname.startsWith("/media/")) return;
 
   const privatePath = [
@@ -48,7 +51,6 @@ self.addEventListener("fetch", (event) => {
   ];
   if (privatePath.some((path) => url.pathname.startsWith(path))) return;
 
-  // Static assets: network first, cache fallback (avoid stale broken CSS).
   if (url.pathname.startsWith("/static/")) {
     event.respondWith(
       fetch(request)
@@ -64,7 +66,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // HTML navigations only: network first, offline page if needed.
   if (request.mode === "navigate" || request.headers.get("accept")?.includes("text/html")) {
     event.respondWith(
       fetch(request).catch(() =>

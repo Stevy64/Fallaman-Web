@@ -1,3 +1,18 @@
+"""Référentiel des métiers, et synonymes de recherche.
+
+Les gens ne cherchent pas avec le vocabulaire du référentiel : ils tapent
+« ménagère », « baby sitter », « cuistot ». Deux mécanismes répondent à cela :
+
+* ``normalized_name`` — version sans accent ni ponctuation, recalculée à chaque
+  ``save()``. C'est sur ce champ que porte la recherche, pour que « maçon » et
+  « macon » ramènent la même chose.
+* ``ProfessionAlias`` — synonymes rattachés à un métier. Une recherche qui tombe
+  sur un alias remonte les annonces du métier correspondant.
+
+``apps.listings.services.matching_profession_ids()`` exploite les deux. Ajouter
+un synonyme suffit donc à améliorer la recherche, sans toucher au code.
+"""
+
 from django.db import models
 from django.utils.text import slugify
 

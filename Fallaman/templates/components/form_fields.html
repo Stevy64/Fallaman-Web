@@ -6,7 +6,9 @@
         <span>{{ field.label }}</span>
       </label>
     {% else %}
-      <p class="field-label">{{ field.label }}</p>
+      <p class="field-label">
+        {{ field.label }}{% if field.field.required %}<span class="field-required" aria-hidden="true">*</span><span class="visually-hidden">(obligatoire)</span>{% endif %}
+      </p>
       {{ field }}
     {% endif %}
     {% if field.help_text %}<p class="field-hint">{{ field.help_text }}</p>{% endif %}

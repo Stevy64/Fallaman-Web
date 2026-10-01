@@ -1,18 +1,58 @@
 {% extends "base.html" %}
+{% load fallaman_tags %}
 {% block title %}Catégories — Fallaman{% endblock %}
+{% block body_class %}page-categories{% endblock %}
 {% block content %}
 <section class="container-narrow py-4 page-enter">
-  <h1>Toutes les catégories</h1>
-  <p class="meta mb-3">Parcourez les métiers du quotidien au Gabon.</p>
-  {% for category in categories %}
-    <div class="page-shell mb-3">
-      <h2 class="h5 mb-2">{{ category.name }}</h2>
-      <div class="chip-row">
-        {% for profession in category.professions.all %}
-          <a class="chip" href="{% url 'listings:search' %}?q={{ profession.name|urlencode }}">{{ profession.name }}</a>
-        {% endfor %}
+  <header class="categories-hero reveal">
+    <p class="step-pill"><i class="bi bi-grid-1x2-fill" aria-hidden="true"></i> Explorer</p>
+    <h1>Toutes les catégories</h1>
+    <p class="lead mb-0">
+      Parcourez les métiers du quotidien au Gabon
+      {% if category_count %}· {{ category_count }} catégorie{{ category_count|pluralize }}{% endif %}.
+    </p>
+  </header>
+
+  <div class="categories-stack">
+    {% for category in categories %}
+      <article class="category-panel reveal">
+        <a class="category-panel-head" href="{% url 'taxonomy:detail' category.slug %}">
+          <span class="category-panel-icon" aria-hidden="true">
+            <i class="bi {{ category.icon|category_icon }}"></i>
+          </span>
+          <span class="category-panel-copy">
+            <strong>{{ category.name }}</strong>
+            <small>
+              {{ category.profession_count }} métier{{ category.profession_count|pluralize }}
+            </small>
+          </span>
+          <span class="category-panel-go" aria-hidden="true">
+            <i class="bi bi-chevron-right"></i>
+          </span>
+        </a>
+        {% if category.professions.all %}
+          <div class="category-panel-chips">
+            {% for profession in category.professions.all %}
+              {% if forloop.counter <= 8 %}
+                <a
+                  class="chip"
+                  href="{% url 'listings:search' %}?q={{ profession.name|urlencode }}"
+                >{{ profession.name }}</a>
+              {% endif %}
+            {% endfor %}
+            {% if category.profession_count > 8 %}
+              <a class="chip is-more" href="{% url 'taxonomy:detail' category.slug %}">
+                +{{ category.profession_count|add:"-8" }}
+              </a>
+            {% endif %}
+          </div>
+        {% endif %}
+      </article>
+    {% empty %}
+      <div class="empty-state reveal">
+        <p>Les catégories apparaîtront ici bientôt.</p>
       </div>
-    </div>
-  {% endfor %}
+    {% endfor %}
+  </div>
 </section>
 {% endblock %}

@@ -43,9 +43,11 @@
           Première connexion ou mot de passe oublié ?
         </a>
       </p>
+      {% if show_staff_login %}
       <p class="meta auth-foot mb-0">
         <a href="{% url 'accounts:staff_login' %}">Accès équipe</a>
       </p>
+      {% endif %}
     </article>
   </div>
 </div>

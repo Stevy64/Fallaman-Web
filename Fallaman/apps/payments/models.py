@@ -1,3 +1,23 @@
+"""Transactions de paiement et journal des webhooks SingPay.
+
+``PaymentTransaction`` est la trace côté Fallaman d'un encaissement. Deux
+identifiants cohabitent, à ne pas confondre :
+
+* ``reference`` — la nôtre (``FLM-…``), envoyée à SingPay comme ``order_id`` ;
+* ``provider_transaction_id`` — celle de SingPay, qui sert à interroger l'API.
+
+``public_id`` (UUID) est ce qui circule dans les URL de retour : la clé primaire
+n'apparaît jamais côté client.
+
+Les transitions passent par ``mark_success()`` / ``mark_failed()``, qui refusent
+de dégrader une transaction déjà réussie. Mais n'appelez pas ``mark_success()``
+directement : ``services.checkout.apply_payment_success()`` pose le verrou de
+ligne, vérifie le montant encaissé et déclenche l'activation.
+
+``SingPayWebhookLog`` garde une trace de chaque notification reçue, valide ou
+non — c'est le premier endroit où regarder quand un paiement n'aboutit pas.
+"""
+
 import uuid
 
 from django.conf import settings

@@ -1,3 +1,14 @@
+"""Notifications internes.
+
+Volontairement éphémères, pour que la cloche reste lisible : la tâche
+``cleanup_notifications`` supprime les non lues de plus de 24 h et les lues de
+plus de 3 jours.
+
+L'exception est ``STAFF_BROADCAST`` — les messages de l'équipe. ``is_persistent``
+les distingue : ils survivent au nettoyage, sont marqués lus plutôt que
+supprimés à l'ouverture, et attendent une suppression explicite du destinataire.
+"""
+
 from django.conf import settings
 from django.db import models
 from django.urls import reverse

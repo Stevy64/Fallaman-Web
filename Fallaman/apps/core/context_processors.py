@@ -45,16 +45,26 @@ def fallaman(request):
         if not hide:
             show_boost_fab = True
             boost_fab_url = "/profil/etre-recommande/"
-            boost_fab_label = "Être recommandé"
+            boost_fab_label = "Booster mon profil"
             match = getattr(request, "resolver_match", None)
-            if match and match.namespace == "listings" and match.url_name == "detail":
+            if match and match.namespace == "recommendations" and match.url_name in {
+                "boost_profile",
+                "boost_listing",
+            }:
+                show_boost_fab = False
+            elif match and match.namespace == "listings" and match.url_name == "detail":
                 listing_pk = match.kwargs.get("pk")
                 if listing_pk:
                     from apps.listings.models import Listing
 
                     if Listing.objects.filter(pk=listing_pk, author_id=request.user.id).exists():
                         boost_fab_url = f"/annonces/{listing_pk}/recommander/"
-                        boost_fab_label = "Booster"
+                        boost_fab_label = "Booster l'annonce"
+
+    android_app_url = str(getattr(settings, "ANDROID_APP_URL", "") or "").strip()
+    ios_app_url = str(getattr(settings, "IOS_APP_URL", "") or "").strip()
+    android_app_ready = android_app_url.startswith(("http://", "https://"))
+    ios_app_ready = ios_app_url.startswith(("http://", "https://"))
 
     return {
         "site_name": settings.PUBLIC_SITE_NAME,
@@ -64,11 +74,14 @@ def fallaman(request):
         "favorite_ids": favorite_ids,
         "safety_notice": "Fallaman ne demande jamais d'argent pour obtenir un emploi.",
         "staff_return_url": staff_return_url,
-        "android_app_url": settings.ANDROID_APP_URL,
-        "ios_app_url": settings.IOS_APP_URL,
-        "android_app_external": str(settings.ANDROID_APP_URL).startswith(("http://", "https://")),
-        "ios_app_external": str(settings.IOS_APP_URL).startswith(("http://", "https://")),
+        "android_app_url": android_app_url or "#",
+        "ios_app_url": ios_app_url or "#",
+        "android_app_external": android_app_ready,
+        "ios_app_external": ios_app_ready,
+        "android_app_ready": android_app_ready,
+        "ios_app_ready": ios_app_ready,
         "show_boost_fab": show_boost_fab,
         "boost_fab_url": boost_fab_url,
         "boost_fab_label": boost_fab_label,
+        "show_staff_login": bool(getattr(settings, "DEV_CONVENIENCES", False)),
     }

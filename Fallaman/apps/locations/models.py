@@ -1,3 +1,13 @@
+"""Découpage géographique du Gabon : province → ville → quartier.
+
+Les trois niveaux sont facultatifs sur une annonce : beaucoup de gens ne
+précisent que la ville. La saisie est libre côté formulaire, puis rapprochée du
+référentiel par ``apps.listings.location_utils.resolve_location()``, qui crée
+l'entrée manquante plutôt que de rejeter la saisie.
+
+``is_popular`` sert au raccourci de villes sur la page d'accueil.
+"""
+
 from django.db import models
 from django.utils.text import slugify
 
