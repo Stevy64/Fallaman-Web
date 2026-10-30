@@ -1,7 +1,9 @@
 # Manuel de déploiement Fallaman — OVH Cloud
 
 **Domaine :** `https://fallaman.gabomazone.com`  
-**Stack :** Docker Compose (micro-services) + nginx + Let’s Encrypt + GitHub Actions  
+**Stack :** Docker Compose (micro-services) + nginx + Let’s Encrypt + GitHub Actions
+
+Si le VPS fait déjà tourner le cluster k3s de Wayizé, suivez [ovh-cluster.md](ovh-cluster.md). Ce manuel reste le chemin Docker sur une machine vide.  
 
 Ce guide couvre le **premier déploiement** et les **mises à jour** en production.
 

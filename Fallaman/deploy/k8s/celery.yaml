@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fallaman-worker
+  namespace: fallaman
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fallaman-worker
+  template:
+    metadata:
+      labels:
+        app: fallaman-worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/stevy64/fallaman:main
+          imagePullPolicy: Always
+          workingDir: /app
+          command: ["celery", "-A", "config", "worker", "--loglevel=info", "--concurrency=1"]
+          envFrom:
+            - secretRef:
+                name: fallaman
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            allowPrivilegeEscalation: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fallaman-beat
+  namespace: fallaman
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: fallaman-beat
+  template:
+    metadata:
+      labels:
+        app: fallaman-beat
+    spec:
+      containers:
+        - name: beat
+          image: ghcr.io/stevy64/fallaman:main
+          imagePullPolicy: Always
+          workingDir: /app
+          command: ["celery", "-A", "config", "beat", "--loglevel=info", "--schedule", "/tmp/celerybeat-schedule"]
+          envFrom:
+            - secretRef:
+                name: fallaman
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            allowPrivilegeEscalation: false

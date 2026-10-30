@@ -5,7 +5,11 @@
 Plateforme de mise en relation entre particuliers et travailleurs au Gabon
 (nounous, maçons, chauffeurs, ménage…). Django 5.2, HTMX, PostgreSQL, Celery.
 
-**Production :** https://fallaman.gabomazone.com (OVH Cloud, Docker micro-services).
+**Freemium et pilotage :** [offres, gestion et plan de lancement sur 90 jours](Fallaman/docs/FREEMIUM_LANCEMENT.md).
+
+**Production :** https://fallaman.gabomazone.com.
+
+Sur le cluster k3s du VPS Wayizé : [Fallaman/docs/ovh-cluster.md](Fallaman/docs/ovh-cluster.md). Sur une machine vide, Docker Compose : [Fallaman/docs/DEPLOIEMENT_OVH.md](Fallaman/docs/DEPLOIEMENT_OVH.md).
 
 ## Structure du dépôt
 

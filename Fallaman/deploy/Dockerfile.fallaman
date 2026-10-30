@@ -1,0 +1,29 @@
+# Image Fallaman pour le cluster k3s (web, worker Celery, beat).
+# Le workflow deploy/fallaman-image.yml la publie sur GHCR.
+# collectstatic passe par les réglages de développement, le temps de la construction.
+# L'image, elle, démarre avec config.settings.production, qui refuse une clé absente.
+
+FROM python:3.13-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DJANGO_SETTINGS_MODULE=config.settings.production
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpq5 \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 10001 --shell /usr/sbin/nologin app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+RUN DJANGO_SETTINGS_MODULE=config.settings.development \
+    DJANGO_SECRET_KEY=construction-de-limage-seulement-pas-la-cle-reelle \
+    python manage.py collectstatic --noinput \
+    && rm -f db.sqlite3 \
+    && chown -R app:app /app
+
+USER app
