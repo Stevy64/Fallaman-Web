@@ -250,29 +250,89 @@ kubectl -n fallaman logs deploy/fallaman-beat
 
 ## 9. Mettre à jour
 
-### Si vous aviez choisi A
+On refait seulement cette étape à chaque publication. Les étapes 1 à 8 ne se rejouent pas. Le Secret `fallaman`, la base et les disques restent en place.
 
-Quand le job Actions est vert :
+La lettre notée à l'étape 4 ne change pas d'une publication à l'autre.
+
+### 9.1 Récupérer le code
+
+Sur le VPS :
 
 ```bash
 cd /srv/fallaman
 git pull --ff-only
-fallaman-deploy
-curl -fsS https://fallaman.gabomazone.com/health/
 ```
 
-Pour revenir à un commit, remplacez `:main` par le SHA du job, dans le Job de migration et dans chaque conteneur de l'image.
+Ça a marché si git affiche `Already up to date` ou `Fast-forward`. S'il affiche `Not possible to fast-forward`, ne forcez rien : le dossier `/srv/fallaman` a été modifié à la main.
 
-### Si vous aviez choisi B
+### 9.2 Image
+
+#### Choix A
+
+Attendez que l'onglet Actions soit vert. L'étiquette `main` de `ghcr.io/stevy64/fallaman` est alors prête. Rien ne se construit sur le VPS.
+
+#### Choix B
 
 ```bash
 cd /srv/fallaman
-git pull --ff-only
 sudo docker build -f Fallaman/deploy/Dockerfile.fallaman -t fallaman:1 Fallaman
 sudo docker save fallaman:1 | sudo k3s ctr images import -
+sudo k3s ctr images ls | grep fallaman
+```
+
+Ça a marché si `grep` affiche `docker.io/library/fallaman:1`.
+
+### 9.3 Appliquer
+
+Le script attend Redis, joue la migration, puis redémarre le site, le worker et beat. Si la migration échoue, il s'arrête et les pods déjà en service restent.
+
+Choix A :
+
+```bash
+fallaman-deploy
+```
+
+Choix B :
+
+```bash
 fallaman-deploy local
+```
+
+Si la commande s'arrête sur le Job :
+
+```bash
+kubectl -n fallaman logs job/fallaman-migrate
+```
+
+Corrigez la cause, puis relancez la même commande `fallaman-deploy`. Ne supprimez pas les disques pour recommencer.
+
+Ça a marché si la commande se termine sans erreur.
+
+### 9.4 Vérifier
+
+```bash
+kubectl -n fallaman rollout status deployment/fallaman-web
+kubectl -n fallaman rollout status deployment/fallaman-worker
+kubectl -n fallaman rollout status deployment/fallaman-beat
 curl -fsS https://fallaman.gabomazone.com/health/
 ```
+
+Ça a marché si chaque rollout affiche `successfully rolled out` et si `curl` répond.
+
+Ouvrez `https://fallaman.gabomazone.com/` puis `https://fallaman.gabomazone.com/admin/`.
+
+### 9.5 Revenir à la version d'avant
+
+Le SHA est celui du job Actions précédent. Ceci remet les pods sur cette image. Cela ne défait pas une migration déjà jouée : si le schéma a changé, restaurez la sauvegarde de la base pendant une fenêtre de maintenance.
+
+```bash
+kubectl -n fallaman set image deployment/fallaman-web gunicorn=ghcr.io/stevy64/fallaman:SHA
+kubectl -n fallaman set image deployment/fallaman-worker worker=ghcr.io/stevy64/fallaman:SHA
+kubectl -n fallaman set image deployment/fallaman-beat beat=ghcr.io/stevy64/fallaman:SHA
+kubectl -n fallaman rollout status deployment/fallaman-web
+```
+
+Le prochain `fallaman-deploy` reprend l'étiquette `main`, parce que les manifests disent `:main`. Pour rester sur l'ancienne version, ne relancez pas `fallaman-deploy` tant que `main` n'est pas revenu au bon commit.
 
 ## À ne pas faire
 
